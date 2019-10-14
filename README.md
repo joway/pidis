@@ -3,7 +3,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/joway/pikv)](https://goreportcard.com/report/github.com/joway/pikv)
 [![CircleCI](https://circleci.com/gh/joway/pikv.svg?style=shield)](https://circleci.com/gh/joway/imagic)
 
-A redis protocol compatible key-value store.
+A redis protocol compatible key-value store. It's built on top of [Badger](https://github.com/dgraph-io/badger).
+
+## 
 
 ## Install
 
