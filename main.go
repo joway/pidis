@@ -17,7 +17,8 @@ func main() {
 
 func serve() {
 	opt := storage.Options{
-		Storage: storage.TypeBadger,
+		Storage: storage.TypeMemory,
+		//Storage: storage.TypeBadger,
 		Dir:     "/tmp/badger",
 	}
 	store, err := storage.NewStorage(opt)
