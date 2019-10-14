@@ -12,10 +12,10 @@ $ go get -u github.com/joway/pikv
 $ pikv -v
 
 # run pikv server
-$ pikv
+$ pikv -p 6380 --dataDir /data
 
 # connect pikv server
-$ redis-cli
+$ redis-cli -p 6380
 ```
 
 ## Benchmark
