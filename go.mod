@@ -9,4 +9,5 @@ require (
 	github.com/kavu/go_reuseport v1.4.0 // indirect
 	github.com/tidwall/evio v1.0.2
 	github.com/tidwall/redcon v1.0.0
+	github.com/urfave/cli v1.22.1
 )

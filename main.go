@@ -1,34 +1,62 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"github.com/joway/loki"
 	"github.com/joway/pikv/parser"
 	"github.com/joway/pikv/storage"
 	"github.com/joway/pikv/types"
 	"github.com/tidwall/redcon"
+	"github.com/urfave/cli"
+	"os"
 )
 
 var logger = loki.New("main")
 
-func main() {
-	var isVersion bool
-	flag.BoolVar(&isVersion, "v", false, "-v Show version")
-	flag.Parse()
-	if isVersion {
-		fmt.Println("0.0.1")
-		return
-	}
-
-	serve()
+type Config struct {
+	port    string
+	dataDir string
 }
 
-func serve() {
+func main() {
+	app := cli.NewApp()
+	app.Name = "pikv"
+	app.Version = "0.0.1"
+	app.Usage = ""
+	cli.VersionFlag = cli.BoolFlag{
+		Name: "version, v",
+	}
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "port, p",
+			Value: "6380",
+		},
+		cli.StringFlag{
+			Name:  "dataDir, d",
+			Value: "/tmp/pikv",
+		},
+	}
+	app.Action = func(c *cli.Context) error {
+		port := c.String("port")
+		dataDir := c.String("dataDir")
+		cfg := Config{
+			port:    port,
+			dataDir: dataDir,
+		}
+		serve(cfg)
+		return nil
+	}
+
+	err := app.Run(os.Args)
+	if err != nil {
+		logger.Fatal("%v", err)
+	}
+}
+
+func serve(cfg Config) {
 	opt := storage.Options{
 		Storage: storage.TypeMemory,
-		//Storage: storage.TypeBadger,
-		Dir: "/tmp/badger",
+		Dir:     cfg.dataDir,
 	}
 	store, err := storage.NewStorage(opt)
 	if err != nil {
@@ -39,7 +67,7 @@ func serve() {
 		store.Close()
 	}()
 
-	if err := redcon.ListenAndServe(fmt.Sprintf(":%d", 6380),
+	if err := redcon.ListenAndServe(fmt.Sprintf(":%s", cfg.port),
 		func(conn redcon.Conn, cmd redcon.Command) {
 			defer func() {
 				if err := recover(); err != nil {

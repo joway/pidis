@@ -1,6 +1,22 @@
 # PiKV
 
-A redis protocol compatible key-value store. 
+A redis protocol compatible key-value store.
+
+## Install
+
+```bash
+$ go get -u github.com/joway/pikv
+
+
+# check version
+$ pikv -v
+
+# run pikv server
+$ pikv
+
+# connect pikv server
+$ redis-cli
+```
 
 ## Benchmark
 
