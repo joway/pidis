@@ -13,7 +13,7 @@ func Get(context types.Context) []byte {
 		return redcon.AppendError(context.Out, ErrInvalidNumberOfArgs)
 	}
 	key := args[1]
-	val, err := context.Storage.Get(key)
+	val, err := context.DB.Get(key)
 	if err != nil {
 		return redcon.AppendNull(context.Out)
 	}
@@ -40,7 +40,7 @@ func Set(context types.Context) []byte {
 		}
 	}
 
-	if err := context.Storage.Set(key, val, ttl); err != nil {
+	if err := context.DB.Set(key, val, ttl); err != nil {
 		loki.Error("%v", err)
 		return redcon.AppendError(context.Out, ErrRuntimeError)
 	}
@@ -52,7 +52,7 @@ func Del(context types.Context) []byte {
 	if len(args) < 2 {
 		return redcon.AppendError(context.Out, ErrInvalidNumberOfArgs)
 	}
-	if err := context.Storage.Del(args[1:]); err != nil {
+	if err := context.DB.Del(args[1:]); err != nil {
 		return redcon.AppendError(context.Out, ErrSyntaxError)
 	}
 

@@ -3,19 +3,17 @@ package main
 import (
 	"fmt"
 	"github.com/joway/loki"
+	"github.com/joway/pikv/db"
 	"github.com/joway/pikv/parser"
-	"github.com/joway/pikv/storage"
 	"github.com/joway/pikv/types"
 	"github.com/tidwall/redcon"
 	"github.com/urfave/cli"
 	"os"
 )
 
-var logger = loki.New("main")
-
 type Config struct {
-	port    string
-	dataDir string
+	port string
+	dir  string
 }
 
 func main() {
@@ -32,16 +30,16 @@ func main() {
 			Value: "6380",
 		},
 		cli.StringFlag{
-			Name:  "dataDir, d",
+			Name:  "dir, d",
 			Value: "/tmp/pikv",
 		},
 	}
 	app.Action = func(c *cli.Context) error {
 		port := c.String("port")
-		dataDir := c.String("dataDir")
+		dir := c.String("dir")
 		cfg := Config{
-			port:    port,
-			dataDir: dataDir,
+			port: port,
+			dir:  dir,
 		}
 		serve(cfg)
 		return nil
@@ -49,22 +47,20 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		logger.Fatal("%v", err)
+		loki.Fatal("%v", err)
 	}
 }
 
 func serve(cfg Config) {
-	opt := storage.Options{
-		Storage: storage.TypeMemory,
-		Dir:     cfg.dataDir,
-	}
-	store, err := storage.NewStorage(opt)
+	database, err := db.NewDatabase(db.Options{
+		DBDir: cfg.dir,
+	})
 	if err != nil {
-		logger.Fatal("%v", err)
+		loki.Fatal("%v", err)
 	}
 	defer func() {
 		loki.Info("Graceful Shutdown")
-		store.Close()
+		database.Close()
 	}()
 
 	if err := redcon.ListenAndServe(fmt.Sprintf(":%s", cfg.port),
@@ -75,11 +71,18 @@ func serve(cfg Config) {
 				}
 			}()
 			context := types.Context{
-				Out:     nil,
-				Args:    cmd.Args,
-				Storage: store,
+				Out:  nil,
+				Args: cmd.Args,
+				DB:   database,
 			}
+			fmt.Printf("%s", cmd.Args)
+			if err := database.Record(cmd.Args); err != nil {
+				loki.Error("%v", err)
+				return
+			}
+			fmt.Println("sdasda\n")
 			out, action := parser.Parse(context)
+			fmt.Printf("%s", out)
 
 			if len(out) > 0 {
 				conn.WriteRaw(out)
@@ -87,13 +90,13 @@ func serve(cfg Config) {
 
 			if action == types.Close {
 				if err := conn.Close(); err != nil {
-					logger.Fatal("Connection Close Failed:\n%v", err)
+					loki.Fatal("Connection Close Failed:\n%v", err)
 				}
 			}
 			if action == types.Shutdown {
-				logger.Fatal("Shutting server down, bye bye")
+				loki.Fatal("Shutting server down, bye bye")
 			}
 		}, nil, nil); err != nil {
-		logger.Fatal("%v", err)
+		loki.Fatal("%v", err)
 	}
 }
