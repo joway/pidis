@@ -16,29 +16,43 @@ func main() {
 }
 
 func serve() {
-	opt := storage.Options{Dir: "/tmp/badger"}
-	store, err := storage.NewBadgerStorage(opt)
+	opt := storage.Options{
+		Storage: storage.TypeBadger,
+		Dir:     "/tmp/badger",
+	}
+	store, err := storage.NewStorage(opt)
 	if err != nil {
 		logger.Fatal("%v", err)
 	}
-	defer store.Close()
+	defer func() {
+		loki.Info("Graceful Shutdown")
+		store.Close()
+	}()
 
-	if err := redcon.ListenAndServe(fmt.Sprintf(":%d", 6370),
+	if err := redcon.ListenAndServe(fmt.Sprintf(":%d", 6380),
 		func(conn redcon.Conn, cmd redcon.Command) {
+			defer func() {
+				if err := recover(); err != nil {
+					conn.WriteError(fmt.Sprintf("fatal error: %s", (err.(error)).Error()))
+				}
+			}()
 			context := types.Context{
+				Out:     nil,
 				Args:    cmd.Args,
 				Storage: store,
 			}
 			out, action := parser.Parse(context)
+
 			if len(out) > 0 {
 				conn.WriteRaw(out)
 			}
-			if action == parser.Close {
+
+			if action == types.Close {
 				if err := conn.Close(); err != nil {
 					logger.Fatal("Connection Close Failed:\n%v", err)
 				}
 			}
-			if action == parser.Shutdown {
+			if action == types.Shutdown {
 				logger.Fatal("Shutting server down, bye bye")
 			}
 		}, nil, nil); err != nil {

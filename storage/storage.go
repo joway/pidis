@@ -7,6 +7,23 @@ type Storage interface {
 	Close() error
 }
 
+const (
+	TypeBadger = "badger"
+	TypeMemory = "memory"
+)
+
 type Options struct {
-	Dir string
+	Storage string
+	Dir     string
+}
+
+func NewStorage(options Options) (Storage, error) {
+	switch options.Storage {
+	default:
+		return NewBadgerStorage(options)
+	case TypeBadger:
+		return NewBadgerStorage(options)
+	case TypeMemory:
+		return NewMemoryStorage(options)
+	}
 }

@@ -26,10 +26,13 @@ func Set(context types.Context) []byte {
 		return redcon.AppendError(context.Out, ErrInvalidNumberOfArgs)
 	}
 
-	key := args[1]
-	val := args[2]
-	var ttl int64 = 0
-	var err error
+	var (
+		key       = args[1]
+		val       = args[2]
+		ttl int64 = 0
+		err error
+	)
+
 	if len(args) == 4 {
 		ttl, err = strconv.ParseInt(string(args[3]), 10, 64)
 		if err != nil {

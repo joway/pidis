@@ -6,22 +6,15 @@ import (
 	"strings"
 )
 
-type Action int
-
-const (
-	Close Action = iota
-	Shutdown
-)
-
-func Parse(context types.Context) ([]byte, Action) {
-	var action Action
+func Parse(context types.Context) ([]byte, types.Action) {
+	var action types.Action
 	switch strings.ToUpper(string(context.Args[0])) {
 	default:
 		return Unknown(context), action
 	case command.QUIT:
-		return Nil(context), Close
+		return Nil(context), types.Close
 	case command.SHUTDOWN:
-		return Nil(context), Shutdown
+		return Nil(context), types.Shutdown
 	case command.PING:
 		return Ping(context), action
 	case command.ECHO:
