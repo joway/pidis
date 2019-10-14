@@ -1,0 +1,26 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.11
+    working_directory: /go/src/github.com/joway/pikv
+    steps:
+      - checkout
+      - run: sudo apt update && sudo apt install -y gcc
+      - run: ./dep.sh
+      - run: env GO111MODULE=on go build
+      - run: env GO111MODULE=on go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
+      - run: bash <(curl -s https://codecov.io/bash)
+  install:
+    docker:
+      - image: circleci/golang:1.11
+    steps:
+      - run: mkdir -p ~/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+      - run: go get github.com/joway/pikv
+      - run: pikv -v
+workflows:
+  version: 2
+  pipeline:
+    jobs:
+      - build
+      - install

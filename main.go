@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/joway/loki"
 	"github.com/joway/pikv/parser"
@@ -12,6 +13,14 @@ import (
 var logger = loki.New("main")
 
 func main() {
+	var isVersion bool
+	flag.BoolVar(&isVersion, "v", false, "-v Show version")
+	flag.Parse()
+	if isVersion {
+		fmt.Println("0.0.1")
+		return
+	}
+
 	serve()
 }
 
@@ -19,7 +28,7 @@ func serve() {
 	opt := storage.Options{
 		Storage: storage.TypeMemory,
 		//Storage: storage.TypeBadger,
-		Dir:     "/tmp/badger",
+		Dir: "/tmp/badger",
 	}
 	store, err := storage.NewStorage(opt)
 	if err != nil {
