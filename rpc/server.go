@@ -8,7 +8,7 @@ import (
 
 func NewRpcServer(database *db.Database) *grpc.Server {
 	server := grpc.NewServer()
-	proto.RegisterOplogServer(server, NewOplogService(database))
+	proto.RegisterPiKVServer(server, NewPiKVService(database))
 
 	return server
 }

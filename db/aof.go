@@ -5,12 +5,23 @@ import (
 	"bytes"
 	"context"
 	"github.com/rs/xid"
+	"io"
 	"os"
 )
 
-func encode(uuid []byte, cmd [][]byte) []byte {
-	fullCmd := bytes.Join(cmd, []byte(" "))
+const (
+	OffsetSize = 12
+)
+
+func AOFEncode(uuid []byte, args [][]byte) []byte {
+	fullCmd := bytes.Join(args, []byte(" "))
 	return append(append(uuid, fullCmd...), '\n')
+}
+
+func AOFDecode(line []byte) (offset []byte, args [][]byte) {
+	offset = line[:OffsetSize]
+	args = bytes.Split(line[OffsetSize:], []byte(" "))
+	return offset, args
 }
 
 type AOFBus struct {
@@ -37,7 +48,7 @@ func NewAOFBus(filePath string) (*AOFBus, error) {
 
 func (w *AOFBus) Append(cmd [][]byte) error {
 	guid := xid.New()
-	line := encode(guid.Bytes(), cmd)
+	line := AOFEncode(guid.Bytes(), cmd)
 	if _, err := w.appendBuffer.Write(line); err != nil {
 		return err
 	}
@@ -52,7 +63,7 @@ func (w *AOFBus) Close() error {
 	return w.appendFile.Close()
 }
 
-func (w *AOFBus) Sync(context context.Context, queue chan []byte, offset []byte) error {
+func (w *AOFBus) Sync(context context.Context, writer io.Writer, offset []byte) error {
 	aofFile, err := os.OpenFile(w.filePath, os.O_RDONLY, 0600)
 	defer aofFile.Close()
 	if err != nil {
@@ -69,12 +80,14 @@ func (w *AOFBus) Sync(context context.Context, queue chan []byte, offset []byte)
 			if err != nil {
 				return err
 			}
-			timestamp := line[:12]
+			timestamp := line[:OffsetSize]
 			if offset != nil && bytes.Compare(timestamp, offset) < 0 {
 				continue
 			}
 
-			queue <- line[12:]
+			if _, err := writer.Write(line); err != nil {
+				return err
+			}
 		}
 	}
 }

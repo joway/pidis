@@ -31,11 +31,10 @@ func TestDatabase_Snapshot(t *testing.T) {
 	f, err := os.OpenFile("/tmp/pikv/pikv.snap", os.O_RDWR|os.O_CREATE, os.ModePerm)
 	defer f.Close()
 	writer := bufio.NewWriter(f)
-	offset, err := db.Snapshot(writer)
+	err = db.Snapshot(writer)
 	assert.NoError(t, err)
 	err = writer.Flush()
 	assert.NoError(t, err)
-	assert.NotEmpty(t, offset)
 
 	newDb, err := NewDatabase(Options{
 		DBDir: "/tmp/pikv/new",

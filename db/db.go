@@ -6,10 +6,12 @@ import (
 	"github.com/joway/pikv/command"
 	"github.com/joway/pikv/common"
 	"github.com/joway/pikv/parser"
+	"github.com/joway/pikv/rpc/proto"
 	"github.com/joway/pikv/storage"
 	"github.com/joway/pikv/types"
 	"github.com/pkg/errors"
 	"github.com/rs/xid"
+	"google.golang.org/grpc"
 	"io"
 	"os"
 	"strings"
@@ -22,7 +24,8 @@ type Options struct {
 type Database struct {
 	storage storage.Storage
 
-	following *Node // slave of
+	following     *Node // slave of
+	followingConn *grpc.ClientConn
 
 	aofBuf *AOFBus
 }
@@ -67,6 +70,9 @@ func (db *Database) Record(cmd [][]byte) error {
 
 func (db *Database) Close() error {
 	var errs []error
+	if err := db.followingConn.Close(); err != nil {
+		errs = append(errs, err)
+	}
 	if err := db.aofBuf.Flush(); err != nil {
 		errs = append(errs, err)
 	}
@@ -98,23 +104,77 @@ func (db *Database) Exec(context types.Context) ([]byte, types.Action, error) {
 	return out, action, nil
 }
 
-func (db *Database) SlaveOf(host, port string) {
+func (db *Database) SlaveOf(host, port string) error {
 	db.following = &Node{
 		host: host,
 		port: port,
 	}
-}
 
-func (db *Database) PullOplog(context context.Context, queue chan []byte, offset []byte) error {
-	return db.aofBuf.Sync(context, queue, offset)
-}
-
-func (db *Database) Snapshot(writer io.Writer) ([]byte, error) {
-	offset := xid.New().Bytes()
-	if err := db.storage.Snapshot(writer); err != nil {
-		return nil, err
+	address := fmt.Sprintf("%s:%s", host, port)
+	var err error
+	db.followingConn, err = grpc.Dial(address, grpc.WithInsecure())
+	if err != nil {
+		return err
 	}
-	return offset, nil
+	return nil
+}
+
+func (db *Database) Following() error {
+	if db.following == nil {
+		return errors.New(common.ErrNodeIsMaster)
+	}
+
+	cli := proto.NewPiKVClient(db.followingConn)
+	ctx := context.TODO()
+	offset := xid.New().Bytes()
+	//fetch snapshot
+	snapStream, err := cli.Snapshot(ctx, &proto.SnapshotReq{})
+	if err != nil {
+		return err
+	}
+	for {
+		resp, err := snapStream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		resp.GetPayload()
+	}
+	//fetch and replay oplog
+	oplogStream, err := cli.Oplog(ctx, &proto.OplogReq{
+		Offset: offset,
+	})
+	if err != nil {
+		return err
+	}
+	for {
+		resp, err := oplogStream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		resp.GetPayload()
+		//replay oplog
+	}
+
+	return nil
+}
+
+func (db *Database) SyncOplog(context context.Context, writer io.Writer, offset []byte) error {
+	return db.aofBuf.Sync(context, writer, offset)
+}
+
+func (db *Database) Snapshot(writer io.Writer) error {
+	if err := db.storage.Snapshot(writer); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (db *Database) LoadSnapshot(reader io.Reader) error {

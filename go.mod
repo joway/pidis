@@ -10,6 +10,7 @@ require (
 	github.com/dgraph-io/badger v1.6.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/golang/groupcache v0.0.0-20191002201903-404acd9df4cc // indirect
+	github.com/golang/protobuf v1.3.2
 	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/google/pprof v0.0.0-20190930153522-6ce02741cba3 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
@@ -36,6 +37,6 @@ require (
 	golang.org/x/tools v0.0.0-20191014205221-18e3458ac98b // indirect
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
 	google.golang.org/appengine v1.6.5 // indirect
-	google.golang.org/grpc v1.24.0 // indirect
+	google.golang.org/grpc v1.24.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )

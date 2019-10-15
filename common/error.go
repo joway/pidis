@@ -5,4 +5,5 @@ const (
 	ErrSyntaxError         = "ERR syntax error"
 	ErrRuntimeError        = "ERR runtime error"
 	ErrNodeReadOnly        = "ERR node read only"
+	ErrNodeIsMaster        = "ERR node is master"
 )

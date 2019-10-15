@@ -1,0 +1,27 @@
+syntax = "proto3";
+package proto;
+
+service PiKV {
+    rpc Snapshot (SnapshotReq) returns (stream SnapshotResp) {
+    }
+
+    rpc Oplog (OplogReq) returns (stream OplogResp) {
+    }
+}
+
+message SnapshotReq {
+}
+
+message SnapshotResp {
+    bytes payload = 1;
+}
+
+message OplogReq {
+    bytes offset = 1;
+}
+
+
+message OplogResp {
+    bytes payload = 1;
+    bytes offset = 2;
+}
