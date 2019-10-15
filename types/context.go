@@ -1,8 +1,6 @@
 package types
 
-import (
-	"github.com/joway/pikv/storage"
-)
+import "github.com/joway/pikv/storage"
 
 type Context struct {
 	Args    [][]byte

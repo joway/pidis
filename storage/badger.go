@@ -1,7 +1,9 @@
 package storage
 
 import (
+	"fmt"
 	"github.com/dgraph-io/badger"
+	"io"
 	"time"
 )
 
@@ -66,4 +68,18 @@ func (storage *BadgerStorage) Del(keys [][]byte) error {
 
 		return nil
 	})
+}
+
+func (storage *BadgerStorage) Snapshot(writer io.Writer) error {
+	ret, err := storage.db.Backup(writer, 0)
+	if err != nil {
+		return err
+	}
+	fmt.Println("ret", ret)
+	return nil
+}
+
+func (storage *BadgerStorage) LoadSnapshot(reader io.Reader) error {
+	//TODO: custom maxPendingWrites
+	return storage.db.Load(reader, 256)
 }

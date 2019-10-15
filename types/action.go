@@ -3,7 +3,7 @@ package types
 type Action int
 
 const (
-	None Action = iota
-	Close
-	Shutdown
+	ActionNone Action = iota
+	ActionClose
+	ActionShutdown
 )

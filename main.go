@@ -3,19 +3,19 @@ package main
 import (
 	"fmt"
 	"github.com/joway/loki"
-	"github.com/joway/pikv/parser"
-	"github.com/joway/pikv/storage"
+	"github.com/joway/pikv/db"
+	"github.com/joway/pikv/rpc"
 	"github.com/joway/pikv/types"
 	"github.com/tidwall/redcon"
 	"github.com/urfave/cli"
+	"net"
 	"os"
 )
 
-var logger = loki.New("main")
-
 type Config struct {
 	port    string
-	dataDir string
+	rpcPort string
+	dir     string
 }
 
 func main() {
@@ -32,42 +32,61 @@ func main() {
 			Value: "6380",
 		},
 		cli.StringFlag{
-			Name:  "dataDir, d",
+			Name:  "rpcPort",
+			Value: "6381",
+		},
+		cli.StringFlag{
+			Name:  "dir, d",
 			Value: "/tmp/pikv",
 		},
 	}
 	app.Action = func(c *cli.Context) error {
 		port := c.String("port")
-		dataDir := c.String("dataDir")
+		rpcPort := c.String("rpcPort")
+		dir := c.String("dir")
 		cfg := Config{
 			port:    port,
-			dataDir: dataDir,
+			rpcPort: rpcPort,
+			dir:     dir,
 		}
-		serve(cfg)
-		return nil
+
+		return setup(cfg)
 	}
 
 	err := app.Run(os.Args)
 	if err != nil {
-		logger.Fatal("%v", err)
+		loki.Fatal("%v", err)
 	}
 }
 
-func serve(cfg Config) {
-	opt := storage.Options{
-		Storage: storage.TypeMemory,
-		Dir:     cfg.dataDir,
-	}
-	store, err := storage.NewStorage(opt)
+func setup(cfg Config) error {
+	database, err := db.NewDatabase(db.Options{
+		DBDir: cfg.dir,
+	})
 	if err != nil {
-		logger.Fatal("%v", err)
+		return err
 	}
 	defer func() {
-		loki.Info("Graceful Shutdown")
-		store.Close()
+		loki.Info("Graceful ActionShutdown")
+		database.Close()
+	}()
+	database.Run()
+
+	externalAddress := fmt.Sprintf(":%s", cfg.port)
+	rpcAddress := fmt.Sprintf(":%s", cfg.rpcPort)
+
+	go func() {
+		if err := rpcServer(database, rpcAddress); err != nil {
+			loki.Fatal("%v", err)
+		}
 	}()
 
-	if err := redcon.ListenAndServe(fmt.Sprintf(":%s", cfg.port),
+	return redisServer(database, externalAddress)
+}
+
+func redisServer(database *db.Database, address string) error {
+	if err := redcon.ListenAndServe(
+		address,
 		func(conn redcon.Conn, cmd redcon.Command) {
 			defer func() {
 				if err := recover(); err != nil {
@@ -75,25 +94,43 @@ func serve(cfg Config) {
 				}
 			}()
 			context := types.Context{
-				Out:     nil,
-				Args:    cmd.Args,
-				Storage: store,
+				Out:  nil,
+				Args: cmd.Args,
 			}
-			out, action := parser.Parse(context)
+			out, action, err := database.Exec(context)
+			if err != nil {
+				loki.Error("%v", err)
+			}
 
 			if len(out) > 0 {
 				conn.WriteRaw(out)
 			}
 
-			if action == types.Close {
+			if action == types.ActionClose {
 				if err := conn.Close(); err != nil {
-					logger.Fatal("Connection Close Failed:\n%v", err)
+					loki.Fatal("Connection ActionClose Failed:\n%v", err)
 				}
 			}
-			if action == types.Shutdown {
-				logger.Fatal("Shutting server down, bye bye")
+			if action == types.ActionShutdown {
+				loki.Fatal("Shutting server down, bye bye")
 			}
-		}, nil, nil); err != nil {
-		logger.Fatal("%v", err)
+		},
+		nil,
+		nil,
+	); err != nil {
+		return err
 	}
+	return nil
+}
+
+func rpcServer(database *db.Database, address string) error {
+	listen, err := net.Listen("tcp", address)
+	if err != nil {
+		return err
+	}
+	server := rpc.NewRpcServer(database)
+	if err := server.Serve(listen); err != nil {
+		return err
+	}
+	return nil
 }

@@ -8,6 +8,7 @@ jobs:
       - checkout
       - run: sudo apt update && sudo apt install -y gcc
       - run: ./dep.sh
+      - run: mkdir -p /tmp/pikv
       - run: env GO111MODULE=on go build
       - run: env GO111MODULE=on go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
       - run: bash <(curl -s https://codecov.io/bash)

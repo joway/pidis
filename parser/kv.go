@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/joway/loki"
+	"github.com/joway/pikv/common"
 	"github.com/joway/pikv/types"
 	"github.com/tidwall/redcon"
 	"strconv"
@@ -10,7 +11,7 @@ import (
 func Get(context types.Context) []byte {
 	args := context.Args
 	if len(args) != 2 {
-		return redcon.AppendError(context.Out, ErrInvalidNumberOfArgs)
+		return redcon.AppendError(context.Out, common.ErrInvalidNumberOfArgs)
 	}
 	key := args[1]
 	val, err := context.Storage.Get(key)
@@ -23,7 +24,7 @@ func Get(context types.Context) []byte {
 func Set(context types.Context) []byte {
 	args := context.Args
 	if !(len(args) >= 3 && len(args) <= 4) {
-		return redcon.AppendError(context.Out, ErrInvalidNumberOfArgs)
+		return redcon.AppendError(context.Out, common.ErrInvalidNumberOfArgs)
 	}
 
 	var (
@@ -36,13 +37,13 @@ func Set(context types.Context) []byte {
 	if len(args) == 4 {
 		ttl, err = strconv.ParseInt(string(args[3]), 10, 64)
 		if err != nil {
-			return redcon.AppendError(context.Out, ErrSyntaxError)
+			return redcon.AppendError(context.Out, common.ErrSyntaxError)
 		}
 	}
 
 	if err := context.Storage.Set(key, val, ttl); err != nil {
 		loki.Error("%v", err)
-		return redcon.AppendError(context.Out, ErrRuntimeError)
+		return redcon.AppendError(context.Out, common.ErrRuntimeError)
 	}
 	return redcon.AppendOK(context.Out)
 }
@@ -50,10 +51,10 @@ func Set(context types.Context) []byte {
 func Del(context types.Context) []byte {
 	args := context.Args
 	if len(args) < 2 {
-		return redcon.AppendError(context.Out, ErrInvalidNumberOfArgs)
+		return redcon.AppendError(context.Out, common.ErrInvalidNumberOfArgs)
 	}
 	if err := context.Storage.Del(args[1:]); err != nil {
-		return redcon.AppendError(context.Out, ErrSyntaxError)
+		return redcon.AppendError(context.Out, common.ErrSyntaxError)
 	}
 
 	return redcon.AppendInt(context.Out, int64(len(args)-1))
