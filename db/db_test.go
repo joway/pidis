@@ -42,8 +42,7 @@ func TestDatabase_Snapshot(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = f.Seek(0, io.SeekStart)
 	assert.NoError(t, err)
-	reader := bufio.NewReader(f)
-	err = newDb.LoadSnapshot(reader)
+	err = newDb.LoadSnapshot(f)
 	assert.NoError(t, err)
 	output, _, err := newDb.Exec(types.Context{
 		Out:  nil,

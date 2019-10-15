@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"io"
 	"os"
+	"path"
 	"strings"
 )
 
@@ -22,6 +23,7 @@ type Options struct {
 }
 
 type Database struct {
+	dir     string
 	storage storage.Storage
 
 	following     *Node // slave of
@@ -31,8 +33,8 @@ type Database struct {
 }
 
 func NewDatabase(options Options) (*Database, error) {
-	dataDir := fmt.Sprintf("%s/data", options.DBDir)
-	aofFilePath := fmt.Sprintf("%s/pikv.aof", options.DBDir)
+	dataDir := path.Join(options.DBDir, "data")
+	aofFilePath := fmt.Sprintf(options.DBDir, "pikv.aof")
 	if err := os.MkdirAll(dataDir, os.ModePerm); err != nil {
 		return nil, err
 	}
@@ -52,6 +54,7 @@ func NewDatabase(options Options) (*Database, error) {
 	}
 
 	database := &Database{
+		dir:     options.DBDir,
 		storage: store,
 
 		aofBuf: aofBuf,
@@ -129,9 +132,12 @@ func (db *Database) Following() error {
 	offset := xid.New().Bytes()
 	//fetch snapshot
 	snapStream, err := cli.Snapshot(ctx, &proto.SnapshotReq{})
+	snapPath := path.Join(db.dir, "data")
 	if err != nil {
 		return err
 	}
+	snapFile, err := os.OpenFile(snapPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, os.ModePerm)
+	//save snapshot
 	for {
 		resp, err := snapStream.Recv()
 		if err == io.EOF {
@@ -141,7 +147,14 @@ func (db *Database) Following() error {
 			return err
 		}
 
-		resp.GetPayload()
+		content := resp.GetPayload()
+		if _, err := snapFile.Write(content); err != nil {
+			return err
+		}
+	}
+	//restore snapshot
+	if err := db.LoadSnapshot(snapFile); err != nil {
+		return err
 	}
 	//fetch and replay oplog
 	oplogStream, err := cli.Oplog(ctx, &proto.OplogReq{
@@ -159,8 +172,16 @@ func (db *Database) Following() error {
 			return err
 		}
 
-		resp.GetPayload()
+		line := resp.GetPayload()
 		//replay oplog
+		//TODO: concurrent
+		_, args := AOFDecode(line)
+		_, _, err = db.Exec(types.Context{
+			Args: args,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

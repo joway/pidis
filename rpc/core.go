@@ -2,10 +2,8 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"github.com/joway/pikv/db"
 	"github.com/joway/pikv/rpc/proto"
-	"github.com/joway/pikv/types"
 	"github.com/joway/pikv/util"
 )
 
@@ -48,15 +46,10 @@ func (s *PiKVService) Oplog(req *proto.OplogReq, srv proto.PiKV_OplogServer) err
 		err = s.db.SyncOplog(ctx, bus, req.Offset)
 	}()
 	for line := range bus.Read() {
-		fmt.Println("line", line)
-		//TODO: concurrent
-		//replay
-		_, args := db.AOFDecode(line)
-		ctx := types.Context{
-			Args: args,
+		resp := &proto.OplogResp{
+			Payload: line,
 		}
-		_, _, err := s.db.Exec(ctx)
-		if err != nil {
+		if err := srv.Send(resp); err != nil {
 			return err
 		}
 	}

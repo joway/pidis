@@ -32,7 +32,7 @@ type AOFBus struct {
 }
 
 func NewAOFBus(filePath string) (*AOFBus, error) {
-	appendFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0600)
+	appendFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_APPEND|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (w *AOFBus) Close() error {
 }
 
 func (w *AOFBus) Sync(context context.Context, writer io.Writer, offset []byte) error {
-	aofFile, err := os.OpenFile(w.filePath, os.O_RDONLY, 0600)
+	aofFile, err := os.OpenFile(w.filePath, os.O_RDONLY, os.ModePerm)
 	defer aofFile.Close()
 	if err != nil {
 		return err
