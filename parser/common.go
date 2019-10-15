@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"github.com/joway/pikv/common"
 	"github.com/joway/pikv/types"
 	"github.com/tidwall/redcon"
 )
@@ -27,7 +28,7 @@ func Ping(context types.Context) []byte {
 	} else if len(args) == 2 {
 		return redcon.AppendBulk(context.Out, args[1])
 	} else {
-		return redcon.AppendError(context.Out, ErrInvalidNumberOfArgs)
+		return redcon.AppendError(context.Out, common.ErrInvalidNumberOfArgs)
 	}
 }
 
@@ -36,6 +37,6 @@ func Echo(context types.Context) []byte {
 	if len(args) == 2 {
 		return redcon.AppendBulk(context.Out, args[1])
 	} else {
-		return redcon.AppendError(context.Out, ErrInvalidNumberOfArgs)
+		return redcon.AppendError(context.Out, common.ErrInvalidNumberOfArgs)
 	}
 }

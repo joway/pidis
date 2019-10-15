@@ -12,9 +12,9 @@ func Parse(context types.Context) ([]byte, types.Action) {
 	default:
 		return Unknown(context), action
 	case command.QUIT:
-		return Nil(context), types.Close
+		return Nil(context), types.ActionClose
 	case command.SHUTDOWN:
-		return Nil(context), types.Shutdown
+		return Nil(context), types.ActionShutdown
 	case command.PING:
 		return Ping(context), action
 	case command.ECHO:
