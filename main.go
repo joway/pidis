@@ -70,6 +70,7 @@ func setup(cfg Config) error {
 		loki.Info("Graceful ActionShutdown")
 		database.Close()
 	}()
+	database.Run()
 
 	externalAddress := fmt.Sprintf(":%s", cfg.port)
 	rpcAddress := fmt.Sprintf(":%s", cfg.rpcPort)

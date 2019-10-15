@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"github.com/joway/loki"
 	"github.com/joway/pikv/command"
 	"github.com/joway/pikv/common"
 	"github.com/joway/pikv/parser"
@@ -25,6 +26,9 @@ type Options struct {
 type Database struct {
 	dir     string
 	storage storage.Storage
+
+	//signals
+	sigFollowing chan bool
 
 	following     *Node // slave of
 	followingConn *grpc.ClientConn
@@ -61,6 +65,14 @@ func NewDatabase(options Options) (*Database, error) {
 	}
 
 	return database, nil
+}
+
+func (db *Database) Run() {
+	go func() {
+		if err := db.Daemon(); err != nil {
+			loki.Fatal("%v", err)
+		}
+	}()
 }
 
 func (db *Database) IsWritable() bool {
@@ -107,31 +119,52 @@ func (db *Database) Exec(context types.Context) ([]byte, types.Action, error) {
 	return out, action, nil
 }
 
-func (db *Database) SlaveOf(host, port string) error {
-	db.following = &Node{
-		host: host,
-		port: port,
+func (db *Database) Daemon() error {
+	var followingContext context.Context
+	for {
+		select {
+		case sig := <-db.sigFollowing:
+			if sig {
+				go func() {
+					defer func() {
+						db.sigFollowing <- false
+					}()
+					followingContext := context.TODO()
+					if err := db.Following(followingContext); err != nil {
+						loki.Fatal("%v", err)
+					}
+				}()
+			} else {
+				followingContext.Done()
+			}
+		}
 	}
+}
 
+func (db *Database) SlaveOf(host, port string) error {
 	address := fmt.Sprintf("%s:%s", host, port)
 	var err error
 	db.followingConn, err = grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
 		return err
 	}
+	db.following = &Node{
+		host: host,
+		port: port,
+	}
+	db.sigFollowing <- true
 	return nil
 }
 
-func (db *Database) Following() error {
+func (db *Database) Following(context context.Context) error {
 	if db.following == nil {
 		return errors.New(common.ErrNodeIsMaster)
 	}
 
 	cli := proto.NewPiKVClient(db.followingConn)
-	ctx := context.TODO()
 	offset := xid.New().Bytes()
 	//fetch snapshot
-	snapStream, err := cli.Snapshot(ctx, &proto.SnapshotReq{})
+	snapStream, err := cli.Snapshot(context, &proto.SnapshotReq{})
 	snapPath := path.Join(db.dir, "data")
 	if err != nil {
 		return err
@@ -157,7 +190,7 @@ func (db *Database) Following() error {
 		return err
 	}
 	//fetch and replay oplog
-	oplogStream, err := cli.Oplog(ctx, &proto.OplogReq{
+	oplogStream, err := cli.Oplog(context, &proto.OplogReq{
 		Offset: offset,
 	})
 	if err != nil {
