@@ -2,7 +2,7 @@ PROJECT_NAME = pikv
 PACKAGES ?= $(shell go list ./... | grep -v /vendor/)
 GOFILES := $(shell find . -name "*.go" -type f -not -path "./vendor/*")
 GOFMT ?= gofmt "-s"
-VERSION := $(shell cat VERSION.go | grep -o -e '[0-9].[0-9].[0-9]')
+VERSION := v$(shell cat VERSION.go | grep -o -e '[0-9].[0-9].[0-9]')
 
 .PHONY: all
 all: install build
