@@ -51,14 +51,14 @@ func TestDatabase_SlaveOf(t *testing.T) {
 	err = follower.SlaveOf("0.0.0.0", "10001")
 	assert.NoError(t, err)
 
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Second)
 
 	_, err = leader.Exec(util.CommandToArgs("set k1 xxx"))
 	assert.NoError(t, err)
 	_, err = leader.Exec(util.CommandToArgs("set k2 xxx"))
 	assert.NoError(t, err)
 
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Second)
 
 	output, err = follower.Exec(util.CommandToArgs("get k"))
 	assert.NoError(t, err)
