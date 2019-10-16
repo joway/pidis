@@ -56,4 +56,4 @@ docker-build:
 .PHONY: docker-push
 docker-push:
 	@echo ">> push docker image"
-	@docker push "joway/${PROJECT_NAME}:${VERSION}" .
+	@docker push "joway/${PROJECT_NAME}:${VERSION}"
