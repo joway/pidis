@@ -1,5 +1,7 @@
 # PiKV
 
+<img width="128px" src="logo.png" alt="logo">
+
 ![GitHub release](https://img.shields.io/github/tag/joway/pikv.svg?label=release)
 [![Go Report Card](https://goreportcard.com/badge/github.com/joway/pikv)](https://goreportcard.com/report/github.com/joway/pikv)
 [![CircleCI](https://circleci.com/gh/joway/pikv.svg?style=shield)](https://circleci.com/gh/joway/imagic)
