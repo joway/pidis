@@ -77,6 +77,9 @@ func (w *AOFBus) Sync(context context.Context, writer io.Writer, offset []byte) 
 		default:
 			//TODO: care about isPrefix == true
 			line, _, err := rd.ReadLine()
+			if err == io.EOF {
+				break
+			}
 			if err != nil {
 				return err
 			}

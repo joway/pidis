@@ -3,14 +3,18 @@ package main
 import (
 	"fmt"
 	"github.com/joway/loki"
+	"github.com/joway/pikv/common"
 	"github.com/joway/pikv/db"
+	"github.com/joway/pikv/executor"
 	"github.com/joway/pikv/rpc"
-	"github.com/joway/pikv/types"
+	"github.com/joway/pikv/util"
 	"github.com/tidwall/redcon"
 	"github.com/urfave/cli"
 	"net"
 	"os"
 )
+
+var logger = loki.New("main")
 
 type Config struct {
 	port    string
@@ -55,19 +59,19 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		loki.Fatal("%v", err)
+		logger.Fatal("%v", err)
 	}
 }
 
 func setup(cfg Config) error {
-	database, err := db.NewDatabase(db.Options{
+	database, err := db.New(db.Options{
 		DBDir: cfg.dir,
 	})
 	if err != nil {
 		return err
 	}
 	defer func() {
-		loki.Info("Graceful ActionShutdown")
+		logger.Info("Graceful ActionShutdown")
 		database.Close()
 	}()
 	database.Run()
@@ -77,7 +81,7 @@ func setup(cfg Config) error {
 
 	go func() {
 		if err := rpcServer(database, rpcAddress); err != nil {
-			loki.Fatal("%v", err)
+			logger.Fatal("%v", err)
 		}
 	}()
 
@@ -93,26 +97,30 @@ func redisServer(database *db.Database, address string) error {
 					conn.WriteError(fmt.Sprintf("fatal error: %s", (err.(error)).Error()))
 				}
 			}()
-			context := types.Context{
-				Out:  nil,
-				Args: cmd.Args,
-			}
-			out, action, err := database.Exec(context)
+			out, action, err := database.Exec(cmd.Args)
 			if err != nil {
-				loki.Error("%v", err)
+				logger.Error("%v", err)
+				return
 			}
-
-			if len(out) > 0 {
-				conn.WriteRaw(out)
-			}
-
-			if action == types.ActionClose {
-				if err := conn.Close(); err != nil {
-					loki.Fatal("Connection ActionClose Failed:\n%v", err)
+			switch action {
+			case executor.ActionNone:
+				if len(out) > 0 {
+					conn.WriteRaw(out)
 				}
-			}
-			if action == types.ActionShutdown {
-				loki.Fatal("Shutting server down, bye bye")
+			case executor.ActionUnknown:
+				conn.WriteRaw(util.MessageError(common.ErrUnknown))
+			case executor.ActionRuntimeError:
+				conn.WriteRaw(util.MessageError(common.ErrRuntimeError))
+			case executor.ActionInvalidNumberOfArgs:
+				conn.WriteRaw(util.MessageError(common.ErrInvalidNumberOfArgs))
+			case executor.ActionInvalidSyntax:
+				conn.WriteRaw(util.MessageError(common.ErrSyntaxError))
+			case executor.ActionClose:
+				if err := conn.Close(); err != nil {
+					logger.Fatal("Connection ActionClose Failed:\n%v", err)
+				}
+			case executor.ActionShutdown:
+				logger.Fatal("Shutting server down, bye bye")
 			}
 		},
 		nil,

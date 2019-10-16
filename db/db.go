@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/joway/loki"
-	"github.com/joway/pikv/command"
 	"github.com/joway/pikv/common"
-	"github.com/joway/pikv/parser"
+	"github.com/joway/pikv/executor"
 	"github.com/joway/pikv/rpc/proto"
 	"github.com/joway/pikv/storage"
-	"github.com/joway/pikv/types"
 	"github.com/pkg/errors"
 	"github.com/rs/xid"
 	"google.golang.org/grpc"
@@ -18,6 +16,8 @@ import (
 	"path"
 	"strings"
 )
+
+var logger = loki.New("db")
 
 type Options struct {
 	DBDir string
@@ -36,7 +36,7 @@ type Database struct {
 	aofBuf *AOFBus
 }
 
-func NewDatabase(options Options) (*Database, error) {
+func New(options Options) (*Database, error) {
 	dataDir := path.Join(options.DBDir, "data")
 	aofFilePath := fmt.Sprintf(options.DBDir, "pikv.aof")
 	if err := os.MkdirAll(dataDir, os.ModePerm); err != nil {
@@ -61,6 +61,8 @@ func NewDatabase(options Options) (*Database, error) {
 		dir:     options.DBDir,
 		storage: store,
 
+		sigFollowing: make(chan bool),
+
 		aofBuf: aofBuf,
 	}
 
@@ -70,9 +72,19 @@ func NewDatabase(options Options) (*Database, error) {
 func (db *Database) Run() {
 	go func() {
 		if err := db.Daemon(); err != nil {
-			loki.Fatal("%v", err)
+			logger.Fatal("Daemon dead: %v", err)
 		}
 	}()
+}
+
+func (db *Database) Get(key []byte) ([]byte, error) {
+	return db.storage.Get(key)
+}
+func (db *Database) Set(key, val []byte, ttl int64) error {
+	return db.storage.Set(key, val, ttl)
+}
+func (db *Database) Del(keys [][]byte) error {
+	return db.storage.Del(keys)
 }
 
 func (db *Database) IsWritable() bool {
@@ -100,23 +112,31 @@ func (db *Database) Close() error {
 	return errors.Errorf("%v", errs)
 }
 
-func (db *Database) Exec(context types.Context) ([]byte, types.Action, error) {
-	if len(context.Args) == 0 {
-		return nil, types.ActionNone, errors.New(common.ErrInvalidNumberOfArgs)
+func (db *Database) exec(args [][]byte, isInternal bool) (output []byte, action executor.Action, err error) {
+	if len(args) == 0 {
+		return nil, executor.ActionNone, errors.New(common.ErrInvalidNumberOfArgs)
 	}
-	context.Storage = db.storage
-	c := strings.ToUpper(string(context.Args[0]))
-	if command.IsWriteCommand(c) {
-		if !db.IsWritable() {
-			return nil, types.ActionNone, errors.New(common.ErrNodeReadOnly)
+	cmd := strings.ToUpper(string(args[0]))
+	exec := executor.New(cmd)
+	if exec.IsWrite() {
+		if !isInternal && !db.IsWritable() {
+			return nil, executor.ActionNone, errors.New(common.ErrNodeReadOnly)
 		}
-		if err := db.Record(context.Args); err != nil {
-			return nil, types.ActionNone, err
+		if err := db.Record(args); err != nil {
+			return nil, executor.ActionNone, err
 		}
 	}
-	out, action := parser.Parse(context)
 
-	return out, action, nil
+	output, action = exec.Exec(db, args)
+	return output, action, nil
+}
+
+func (db *Database) Exec(args [][]byte) (output []byte, action executor.Action, err error) {
+	return db.exec(args, false)
+}
+
+func (db *Database) IExec(args [][]byte) (output []byte, action executor.Action, err error) {
+	return db.exec(args, true)
 }
 
 func (db *Database) Daemon() error {
@@ -129,12 +149,14 @@ func (db *Database) Daemon() error {
 					defer func() {
 						db.sigFollowing <- false
 					}()
-					followingContext := context.TODO()
+					logger.Info("following node %s", db.following)
+					followingContext = context.TODO()
 					if err := db.Following(followingContext); err != nil {
-						loki.Fatal("%v", err)
+						logger.Fatal("%v", err)
 					}
 				}()
 			} else {
+				logger.Info("removed following node %s", db.following)
 				followingContext.Done()
 			}
 		}
@@ -158,18 +180,22 @@ func (db *Database) SlaveOf(host, port string) error {
 
 func (db *Database) Following(context context.Context) error {
 	if db.following == nil {
-		return errors.New(common.ErrNodeIsMaster)
+		return common.ErrNodeIsMaster
 	}
 
-	cli := proto.NewPiKVClient(db.followingConn)
+	client := proto.NewPiKVClient(db.followingConn)
+	offsetId := xid.New()
 	offset := xid.New().Bytes()
 	//fetch snapshot
-	snapStream, err := cli.Snapshot(context, &proto.SnapshotReq{})
-	snapPath := path.Join(db.dir, "data")
+	snapPath := path.Join(db.dir, fmt.Sprintf("%s.snapshot", string(offsetId.Time().Unix())))
+	snapStream, err := client.Snapshot(context, &proto.SnapshotReq{})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "create snapshot stream failed")
 	}
-	snapFile, err := os.OpenFile(snapPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, os.ModePerm)
+	snapFile, err := os.OpenFile(snapPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		return errors.Wrap(err, "cannot open snapshot file")
+	}
 	//save snapshot
 	for {
 		resp, err := snapStream.Recv()
@@ -177,24 +203,25 @@ func (db *Database) Following(context context.Context) error {
 			break
 		}
 		if err != nil {
-			return err
+			return errors.Wrap(err, "recv snapshot failed")
 		}
 
 		content := resp.GetPayload()
 		if _, err := snapFile.Write(content); err != nil {
-			return err
+			return errors.Wrap(err, "append snapshot file failed")
 		}
 	}
 	//restore snapshot
+	_, _ = snapFile.Seek(0, io.SeekStart)
 	if err := db.LoadSnapshot(snapFile); err != nil {
-		return err
+		return errors.Wrap(err, "load snapshot failed")
 	}
 	//fetch and replay oplog
-	oplogStream, err := cli.Oplog(context, &proto.OplogReq{
+	oplogStream, err := client.Oplog(context, &proto.OplogReq{
 		Offset: offset,
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "fetch oplog failed")
 	}
 	for {
 		resp, err := oplogStream.Recv()
@@ -202,18 +229,17 @@ func (db *Database) Following(context context.Context) error {
 			break
 		}
 		if err != nil {
-			return err
+			return errors.Wrap(err, "recv oplog failed")
 		}
 
 		line := resp.GetPayload()
+		fmt.Println("line", line)
 		//replay oplog
 		//TODO: concurrent
 		_, args := AOFDecode(line)
-		_, _, err = db.Exec(types.Context{
-			Args: args,
-		})
+		_, _, err = db.IExec(args)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "replay oplog failed")
 		}
 	}
 

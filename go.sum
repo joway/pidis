@@ -71,6 +71,10 @@ github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/joway/loki v0.2.2 h1:vv5tJncn40trHxaZw4CJ6tQanIV2GFXkfDAvYeQglyo=
 github.com/joway/loki v0.2.2/go.mod h1:PMZbnfdOJ+tqbpvFwp8hJ/dFiCz3VUsv7DF9tttq1xM=
+github.com/joway/loki v0.2.3 h1:Yl5nG5THZytGN6yaK+LeMmYFdJtNMHoGs2B4ofB/XHA=
+github.com/joway/loki v0.2.3/go.mod h1:X2+IyXmM+9ZiC5gSyiDqj3CFr25n2cR4PRuufLLsK0E=
+github.com/joway/loki v0.2.4 h1:QtlWBRIfWt9bjK29Ig+YsANZrjP3A10KzrDhv7i70Ho=
+github.com/joway/loki v0.2.4/go.mod h1:X2+IyXmM+9ZiC5gSyiDqj3CFr25n2cR4PRuufLLsK0E=
 github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024/go.mod h1:6v2b51hI/fHJwM22ozAgKL4VKDeJcHhJFhtBdhmNjmU=
 github.com/jstemmer/go-junit-report v0.9.1/go.mod h1:Brl9GWCQeLvo8nXZwPNNblvFj/XSXhF0NWZEnDohbsk=
 github.com/kavu/go_reuseport v1.4.0 h1:YIp/96RZ3sJfn0LN+FFkkXIq3H3dfVOdRUtNejhDcxc=
@@ -110,6 +114,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
+github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/tidwall/evio v1.0.2 h1:vhPp5nVS5PZfR0CfV5ixqDEf+BKQFcaR1W1XeLLkvRE=
 github.com/tidwall/evio v1.0.2/go.mod h1:cYtY49LddNrlpsOmW7qJnqM8B2gOjrFrzT8+Fnb/GKs=
 github.com/tidwall/redcon v1.0.0 h1:D4AzzJ81Afeh144fgnj5H0aSVPBBJ5RI9Rzj0zThU+E=
@@ -242,6 +248,7 @@ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/errgo.v2 v2.1.0/go.mod h1:hNsd1EY+bozCKY1Ytp96fpM3vjJbqLJn88ws8XvfDNI=
+gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190106161140-3f1c8253044a/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
