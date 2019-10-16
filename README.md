@@ -14,7 +14,21 @@ A redis protocol compatible key-value store. It's built on top of [Badger](https
 - [x] Master-Slave Architecture
 - [ ] Slave of with key prefix
 
-## Install
+## Get Start
+
+### From docker
+
+```bash
+docker run \
+  --name=pikv
+  -p 6380:6380 \
+  -p 6381:6381 \
+  -v /tmp/pikv:/data \
+  joway/pikv:latest \
+  pikv -p 6380 --rpcPort 6381 --dataDir /data
+```
+
+### From go get
 
 ```bash
 $ go get -u github.com/joway/pikv
@@ -30,34 +44,9 @@ $ pikv -p 6380 --dataDir /data
 $ redis-cli -p 6380
 ```
 
-## Benchmark
+## Supported Redis Keys
 
-### pikv with ssd storage
- 
-```bash
-redis-benchmark -p 6380 -q -t SET,GET -P 1024 -r 1000000000 -n 10000000
-SET: 89827.09 requests per second
-GET: 473619.41 requests per second
-```
-
-### pikv with memory storage
-
-```bash
-redis-benchmark -p 6380 -q -t SET,GET -P 1024 -r 1000000000 -n 10000000
-SET: 943930.56 requests per second
-GET: 2215821.00 requests per second
-```
-
-### redis
-
-```bash
-redis-benchmark -p 6379 -q -t SET,GET -P 1024 -r 1000000000 -n 10000000
-SET: 318582.94 requests per second
-GET: 604887.50 requests per second
-```
-
-### Environment:
-
-- MacBook Pro (13-inch, 2018, Four Thunderbolt 3 Ports)
-- 2.3 GHz Quad-Core Intel Core i5
-- 16 GB 2133 MHz LPDDR3
+- KV
+  - GET key  
+  - SET key val  
+  - DEL key [key ...]
