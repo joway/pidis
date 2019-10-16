@@ -57,3 +57,5 @@ docker-build:
 docker-push:
 	@echo ">> push docker image"
 	@docker push "joway/${PROJECT_NAME}:${VERSION}"
+	@docker tag "joway/${PROJECT_NAME}:${VERSION}" "joway/${PROJECT_NAME}:latest"
+	@docker push "joway/${PROJECT_NAME}:latest"
