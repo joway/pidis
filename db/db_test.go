@@ -42,7 +42,7 @@ func TestDatabase_SlaveOf(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	 _, err = leader.Exec(util.CommandToArgs("set k x"))
+	_, err = leader.Exec(util.CommandToArgs("set k x"))
 	assert.NoError(t, err)
 	output, err := leader.Exec(util.CommandToArgs("get k"))
 	assert.NoError(t, err)
@@ -53,9 +53,9 @@ func TestDatabase_SlaveOf(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	 _, err = leader.Exec(util.CommandToArgs("set k1 xxx"))
+	_, err = leader.Exec(util.CommandToArgs("set k1 xxx"))
 	assert.NoError(t, err)
-	 _, err = leader.Exec(util.CommandToArgs("set k2 xxx"))
+	_, err = leader.Exec(util.CommandToArgs("set k2 xxx"))
 	assert.NoError(t, err)
 
 	time.Sleep(time.Millisecond * 100)

@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	OffsetSize = 12
+	offsetSize = 12
 )
 
 func AOFEncode(uuid []byte, args [][]byte) []byte {
@@ -19,8 +19,8 @@ func AOFEncode(uuid []byte, args [][]byte) []byte {
 }
 
 func AOFDecode(line []byte) (offset []byte, args [][]byte) {
-	offset = line[:OffsetSize]
-	args = bytes.Split(line[OffsetSize:], []byte(" "))
+	offset = line[:offsetSize]
+	args = bytes.Split(line[offsetSize:], []byte(" "))
 	return offset, args
 }
 
@@ -52,6 +52,8 @@ func (w *AOFBus) Append(cmd [][]byte) error {
 	if _, err := w.appendBuffer.Write(line); err != nil {
 		return err
 	}
+
+	//TODO: performance
 	return w.Flush()
 }
 
@@ -83,7 +85,7 @@ func (w *AOFBus) Sync(context context.Context, writer io.Writer, offset []byte) 
 			if err != nil {
 				return err
 			}
-			timestamp := line[:OffsetSize]
+			timestamp := line[:offsetSize]
 			if offset != nil && bytes.Compare(timestamp, offset) < 0 {
 				continue
 			}
