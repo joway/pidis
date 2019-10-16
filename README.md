@@ -9,7 +9,6 @@ A redis protocol compatible key-value store. It's built on top of [Badger](https
 
 - [x] Master-Slave Architecture
 - [ ] Slave of with key prefix
-- [ ] Slave of native redis server
 
 ## Install
 

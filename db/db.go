@@ -112,30 +112,30 @@ func (db *Database) Close() error {
 	return errors.Errorf("%v", errs)
 }
 
-func (db *Database) exec(args [][]byte, isInternal bool) (output []byte, action executor.Action, err error) {
+func (db *Database) exec(args [][]byte, isInternal bool) (output []byte, err error) {
 	if len(args) == 0 {
-		return nil, executor.ActionNone, errors.New(common.ErrInvalidNumberOfArgs)
+		return nil, common.ErrInvalidNumberOfArgs
 	}
 	cmd := strings.ToUpper(string(args[0]))
 	exec := executor.New(cmd)
 	if exec.IsWrite() {
 		if !isInternal && !db.IsWritable() {
-			return nil, executor.ActionNone, errors.New(common.ErrNodeReadOnly)
+			return nil, common.ErrNodeReadOnly
 		}
 		if err := db.Record(args); err != nil {
-			return nil, executor.ActionNone, err
+			return nil, err
 		}
 	}
 
-	output, action = exec.Exec(db, args)
-	return output, action, nil
+	output, err = exec.Exec(db, args)
+	return output, err
 }
 
-func (db *Database) Exec(args [][]byte) (output []byte, action executor.Action, err error) {
+func (db *Database) Exec(args [][]byte) (output []byte, err error) {
 	return db.exec(args, false)
 }
 
-func (db *Database) IExec(args [][]byte) (output []byte, action executor.Action, err error) {
+func (db *Database) IExec(args [][]byte) (output []byte, err error) {
 	return db.exec(args, true)
 }
 
@@ -237,7 +237,7 @@ func (db *Database) Following(context context.Context) error {
 		//replay oplog
 		//TODO: concurrent
 		_, args := AOFDecode(line)
-		_, _, err = db.IExec(args)
+		_, err = db.IExec(args)
 		if err != nil {
 			return errors.Wrap(err, "replay oplog failed")
 		}

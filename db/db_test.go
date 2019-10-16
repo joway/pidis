@@ -42,9 +42,9 @@ func TestDatabase_SlaveOf(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	_, _, err = leader.Exec(util.CommandToArgs("set k x"))
+	 _, err = leader.Exec(util.CommandToArgs("set k x"))
 	assert.NoError(t, err)
-	output, _, err := leader.Exec(util.CommandToArgs("get k"))
+	output, err := leader.Exec(util.CommandToArgs("get k"))
 	assert.NoError(t, err)
 	assert.Equal(t, output[4], byte('x'))
 
@@ -53,20 +53,20 @@ func TestDatabase_SlaveOf(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	_, _, err = leader.Exec(util.CommandToArgs("set k1 xxx"))
+	 _, err = leader.Exec(util.CommandToArgs("set k1 xxx"))
 	assert.NoError(t, err)
-	_, _, err = leader.Exec(util.CommandToArgs("set k2 xxx"))
+	 _, err = leader.Exec(util.CommandToArgs("set k2 xxx"))
 	assert.NoError(t, err)
 
 	time.Sleep(time.Millisecond * 100)
 
-	output, _, err = follower.Exec(util.CommandToArgs("get k"))
+	output, err = follower.Exec(util.CommandToArgs("get k"))
 	assert.NoError(t, err)
 	assert.Equal(t, output[4], byte('x'))
-	output, _, err = follower.Exec(util.CommandToArgs("get k1"))
+	output, err = follower.Exec(util.CommandToArgs("get k1"))
 	assert.NoError(t, err)
 	assert.Equal(t, string(output[4:7]), "xxx")
-	output, _, err = follower.Exec(util.CommandToArgs("get k2"))
+	output, err = follower.Exec(util.CommandToArgs("get k2"))
 	assert.NoError(t, err)
 	assert.Equal(t, string(output[4:7]), "xxx")
 }
@@ -79,7 +79,7 @@ func TestDatabase_Snapshot(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	_, _, err = db.Exec(util.CommandToArgs("set a x"))
+	_, err = db.Exec(util.CommandToArgs("set a x"))
 	assert.NoError(t, err)
 
 	f, err := os.OpenFile("/tmp/pikv/pikv.snap", os.O_RDWR|os.O_CREATE, os.ModePerm)
@@ -98,6 +98,6 @@ func TestDatabase_Snapshot(t *testing.T) {
 	assert.NoError(t, err)
 	err = newDb.LoadSnapshot(f)
 	assert.NoError(t, err)
-	output, _, err := newDb.Exec(util.CommandToArgs("get a"))
+	output, err := newDb.Exec(util.CommandToArgs("get a"))
 	assert.Equal(t, output[4], byte('x'))
 }

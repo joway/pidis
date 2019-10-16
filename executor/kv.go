@@ -10,21 +10,34 @@ type KVExecutor struct {
 	BaseExecutor
 }
 
-func (KVExecutor) Get(db common.Database, args [][]byte) ([]byte, Action) {
+func (e KVExecutor) Exec(db common.Database, args [][]byte) ([]byte, error) {
+	switch e.cmd {
+	case GET:
+		return e.Get(db, args)
+	case DEL:
+		return e.Del(db, args)
+	case SET:
+		return e.Set(db, args)
+	default:
+		return nil, common.ErrUnknownCommand
+	}
+}
+
+func (KVExecutor) Get(db common.Database, args [][]byte) ([]byte, error) {
 	if len(args) != 2 {
-		return util.MessageError(common.ErrInvalidNumberOfArgs), ActionNone
+		return nil, common.ErrInvalidNumberOfArgs
 	}
 	key := args[1]
 	val, err := db.Get(key)
 	if err != nil {
-		return util.MessageNull(), ActionNone
+		return util.MessageNull(), nil
 	}
-	return util.Message(val), ActionNone
+	return util.Message(val), nil
 }
 
-func (e KVExecutor) Set(db common.Database, args [][]byte) ([]byte, Action) {
+func (e KVExecutor) Set(db common.Database, args [][]byte) ([]byte, error) {
 	if !(len(args) >= 3 && len(args) <= 4) {
-		return nil, ActionInvalidNumberOfArgs
+		return nil, common.ErrInvalidNumberOfArgs
 	}
 
 	var (
@@ -37,37 +50,24 @@ func (e KVExecutor) Set(db common.Database, args [][]byte) ([]byte, Action) {
 	if len(args) == 4 {
 		ttl, err = strconv.ParseInt(string(args[3]), 10, 64)
 		if err != nil {
-			return nil, ActionInvalidSyntax
+			return nil, common.ErrSyntaxError
 		}
 	}
 
 	if err := db.Set(key, val, ttl); err != nil {
 		logger.Error("%v", err)
-		return nil, ActionRuntimeError
+		return nil, common.ErrRuntimeError
 	}
-	return util.MessageOK(), ActionNone
+	return util.MessageOK(), nil
 }
 
-func (e KVExecutor) Del(db common.Database, args [][]byte) ([]byte, Action) {
+func (e KVExecutor) Del(db common.Database, args [][]byte) ([]byte, error) {
 	if len(args) < 2 {
-		return nil, ActionInvalidNumberOfArgs
+		return nil, common.ErrInvalidNumberOfArgs
 	}
 	if err := db.Del(args[1:]); err != nil {
-		return nil, ActionInvalidSyntax
+		return nil, common.ErrSyntaxError
 	}
 
-	return util.MessageInt(int64(len(args) - 1)), ActionNone
-}
-
-func (e KVExecutor) Exec(db common.Database, args [][]byte) ([]byte, Action) {
-	switch e.cmd {
-	case GET:
-		return e.Get(db, args)
-	case DEL:
-		return e.Del(db, args)
-	case SET:
-		return e.Set(db, args)
-	default:
-		return nil, ActionUnknown
-	}
+	return util.MessageInt(int64(len(args) - 1)), nil
 }

@@ -5,7 +5,6 @@ import (
 	"github.com/joway/loki"
 	"github.com/joway/pikv/common"
 	"github.com/joway/pikv/db"
-	"github.com/joway/pikv/executor"
 	"github.com/joway/pikv/rpc"
 	"github.com/joway/pikv/util"
 	"github.com/tidwall/redcon"
@@ -97,30 +96,31 @@ func redisServer(database *db.Database, address string) error {
 					conn.WriteError(fmt.Sprintf("fatal error: %s", (err.(error)).Error()))
 				}
 			}()
-			out, action, err := database.Exec(cmd.Args)
-			if err != nil {
-				logger.Error("%v", err)
-				return
-			}
-			switch action {
-			case executor.ActionNone:
-				if len(out) > 0 {
-					conn.WriteRaw(out)
-				}
-			case executor.ActionUnknown:
-				conn.WriteRaw(util.MessageError(common.ErrUnknown))
-			case executor.ActionRuntimeError:
-				conn.WriteRaw(util.MessageError(common.ErrRuntimeError))
-			case executor.ActionInvalidNumberOfArgs:
-				conn.WriteRaw(util.MessageError(common.ErrInvalidNumberOfArgs))
-			case executor.ActionInvalidSyntax:
-				conn.WriteRaw(util.MessageError(common.ErrSyntaxError))
-			case executor.ActionClose:
+			out, err := database.Exec(cmd.Args)
+			switch err {
+			case nil:
+				conn.WriteRaw(out)
+			case common.ErrUnknownCommand:
+				conn.WriteRaw(util.MessageError(fmt.Sprintf(
+					"ERR unknown command '%s'",
+					cmd.Args[0],
+				)))
+			case common.ErrUnknown:
+				conn.WriteRaw(util.MessageError(common.ErrUnknown.Error()))
+			case common.ErrRuntimeError:
+				conn.WriteRaw(util.MessageError(common.ErrRuntimeError.Error()))
+			case common.ErrInvalidNumberOfArgs:
+				conn.WriteRaw(util.MessageError(common.ErrInvalidNumberOfArgs.Error()))
+			case common.ErrSyntaxError:
+				conn.WriteRaw(util.MessageError(common.ErrSyntaxError.Error()))
+			case common.ErrCloseConn:
 				if err := conn.Close(); err != nil {
-					logger.Fatal("Connection ActionClose Failed:\n%v", err)
+					logger.Error("connection close Failed:\n%v", err)
 				}
-			case executor.ActionShutdown:
-				logger.Fatal("Shutting server down, bye bye")
+			case common.ErrShutdown:
+				logger.Fatal("shutting server down, bye bye")
+			default:
+				logger.Error("Unhandled error : %v", err)
 			}
 		},
 		nil,

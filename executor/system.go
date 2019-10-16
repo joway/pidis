@@ -10,10 +10,8 @@ type SystemExecutor struct {
 	BaseExecutor
 }
 
-func (e SystemExecutor) Exec(db common.Database, args [][]byte) ([]byte, Action) {
+func (e SystemExecutor) Exec(db common.Database, args [][]byte) ([]byte, error) {
 	switch e.cmd {
-	default:
-		return e.Unknown(db, args)
 	case PING:
 		return e.Ping(db, args)
 	case ECHO:
@@ -24,42 +22,37 @@ func (e SystemExecutor) Exec(db common.Database, args [][]byte) ([]byte, Action)
 		return e.Shutdown(db, args)
 	case SLAVEOF:
 		return e.SlaveOf(db, args)
+	default:
+		return nil, common.ErrUnknownCommand
 	}
 }
 
-func (e SystemExecutor) Unknown(db common.Database, args [][]byte) ([]byte, Action) {
-	return util.MessageError(fmt.Sprintf(
-		"ERR unknown command '%s'",
-		e.cmd,
-	)), ActionNone
+func (SystemExecutor) Ping(db common.Database, args [][]byte) ([]byte, error) {
+	return util.MessageString("PONG"), nil
 }
 
-func (SystemExecutor) Ping(db common.Database, args [][]byte) ([]byte, Action) {
-	return util.MessageString("PONG"), ActionNone
-}
-
-func (SystemExecutor) Echo(db common.Database, args [][]byte) ([]byte, Action) {
+func (SystemExecutor) Echo(db common.Database, args [][]byte) ([]byte, error) {
 	if len(args) == 2 {
-		return util.Message(args[1]), ActionNone
+		return util.Message(args[1]), nil
 	} else {
-		return nil, ActionInvalidNumberOfArgs
+		return nil, common.ErrInvalidNumberOfArgs
 	}
 }
 
-func (SystemExecutor) Quit(db common.Database, args [][]byte) ([]byte, Action) {
-	return util.MessageOK(), ActionClose
+func (SystemExecutor) Quit(db common.Database, args [][]byte) ([]byte, error) {
+	return util.MessageOK(), common.ErrCloseConn
 }
 
-func (SystemExecutor) Shutdown(db common.Database, args [][]byte) ([]byte, Action) {
-	return util.MessageOK(), ActionShutdown
+func (SystemExecutor) Shutdown(db common.Database, args [][]byte) ([]byte, error) {
+	return util.MessageOK(), common.ErrShutdown
 }
 
-func (e SystemExecutor) SlaveOf(db common.Database, args [][]byte) ([]byte, Action) {
+func (e SystemExecutor) SlaveOf(db common.Database, args [][]byte) ([]byte, error) {
 	host := string(args[1])
 	port := string(args[2])
 	if err := db.SlaveOf(host, port); err != nil {
 		logger.Error("%v", err)
-		return util.MessageError(fmt.Sprintf("%s Failed", e.cmd)), ActionNone
+		return util.MessageError(fmt.Sprintf("%s Failed", e.cmd)), nil
 	}
-	return util.MessageOK(), ActionNone
+	return util.MessageOK(), nil
 }

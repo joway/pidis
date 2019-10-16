@@ -25,14 +25,6 @@ var (
 )
 
 const (
-	ActionNone Action = iota
-	ActionUnknown
-	ActionInvalidNumberOfArgs
-	ActionInvalidSyntax
-	ActionRuntimeError
-	ActionClose
-	ActionShutdown
-
 	TypeSystem = 0
 	TypeRead   = 1
 	TypeWrite  = 2
@@ -54,7 +46,7 @@ func New(cmd string) Executor {
 type Executor interface {
 	Type() int
 	IsWrite() bool
-	Exec(db common.Database, args [][]byte) (output []byte, action Action)
+	Exec(db common.Database, args [][]byte) (output []byte, err error)
 }
 
 type BaseExecutor struct {
