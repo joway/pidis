@@ -3,14 +3,17 @@ package main
 import (
 	"fmt"
 	"github.com/joway/loki"
+	"github.com/joway/pikv/common"
 	"github.com/joway/pikv/db"
 	"github.com/joway/pikv/rpc"
-	"github.com/joway/pikv/types"
+	"github.com/joway/pikv/util"
 	"github.com/tidwall/redcon"
 	"github.com/urfave/cli"
 	"net"
 	"os"
 )
+
+var logger = loki.New("main")
 
 type Config struct {
 	port    string
@@ -55,19 +58,19 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		loki.Fatal("%v", err)
+		logger.Fatal("%v", err)
 	}
 }
 
 func setup(cfg Config) error {
-	database, err := db.NewDatabase(db.Options{
+	database, err := db.New(db.Options{
 		DBDir: cfg.dir,
 	})
 	if err != nil {
 		return err
 	}
 	defer func() {
-		loki.Info("Graceful ActionShutdown")
+		logger.Info("Graceful ActionShutdown")
 		database.Close()
 	}()
 	database.Run()
@@ -77,7 +80,7 @@ func setup(cfg Config) error {
 
 	go func() {
 		if err := rpcServer(database, rpcAddress); err != nil {
-			loki.Fatal("%v", err)
+			logger.Fatal("%v", err)
 		}
 	}()
 
@@ -93,26 +96,31 @@ func redisServer(database *db.Database, address string) error {
 					conn.WriteError(fmt.Sprintf("fatal error: %s", (err.(error)).Error()))
 				}
 			}()
-			context := types.Context{
-				Out:  nil,
-				Args: cmd.Args,
-			}
-			out, action, err := database.Exec(context)
-			if err != nil {
-				loki.Error("%v", err)
-			}
-
-			if len(out) > 0 {
+			out, err := database.Exec(cmd.Args)
+			switch err {
+			case nil:
 				conn.WriteRaw(out)
-			}
-
-			if action == types.ActionClose {
+			case common.ErrUnknownCommand:
+				conn.WriteRaw(util.MessageError(fmt.Sprintf(
+					"ERR unknown command '%s'",
+					cmd.Args[0],
+				)))
+			case common.ErrUnknown:
+				conn.WriteRaw(util.MessageError(common.ErrUnknown.Error()))
+			case common.ErrRuntimeError:
+				conn.WriteRaw(util.MessageError(common.ErrRuntimeError.Error()))
+			case common.ErrInvalidNumberOfArgs:
+				conn.WriteRaw(util.MessageError(common.ErrInvalidNumberOfArgs.Error()))
+			case common.ErrSyntaxError:
+				conn.WriteRaw(util.MessageError(common.ErrSyntaxError.Error()))
+			case common.ErrCloseConn:
 				if err := conn.Close(); err != nil {
-					loki.Fatal("Connection ActionClose Failed:\n%v", err)
+					logger.Error("connection close Failed:\n%v", err)
 				}
-			}
-			if action == types.ActionShutdown {
-				loki.Fatal("Shutting server down, bye bye")
+			case common.ErrShutdown:
+				logger.Fatal("shutting server down, bye bye")
+			default:
+				logger.Error("Unhandled error : %v", err)
 			}
 		},
 		nil,

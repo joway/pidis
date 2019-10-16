@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"fmt"
 	"github.com/dgraph-io/badger"
 	"io"
 	"time"
@@ -71,11 +70,10 @@ func (storage *BadgerStorage) Del(keys [][]byte) error {
 }
 
 func (storage *BadgerStorage) Snapshot(writer io.Writer) error {
-	ret, err := storage.db.Backup(writer, 0)
+	_, err := storage.db.Backup(writer, 0)
 	if err != nil {
 		return err
 	}
-	fmt.Println("ret", ret)
 	return nil
 }
 

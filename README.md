@@ -5,7 +5,10 @@
 
 A redis protocol compatible key-value store. It's built on top of [Badger](https://github.com/dgraph-io/badger).
 
-## 
+## Feature
+
+- [x] Master-Slave Architecture
+- [ ] Slave of with key prefix
 
 ## Install
 
