@@ -6,10 +6,17 @@ jobs:
     working_directory: /go/src/github.com/joway/pikv
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - v1-pkg-cache
       - run: sudo apt update && sudo apt install -y gcc
       - run: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.21.0
       - run: mkdir -p /tmp/pikv
       - run: env GO111MODULE=on make
+      - save_cache:
+          key: v1-pkg-cache
+          paths:
+            - "vendor"
       - run: env GO111MODULE=on make fmt-check
       - run: env GO111MODULE=on make test
       - run: bash <(curl -s https://codecov.io/bash)
