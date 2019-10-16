@@ -7,10 +7,12 @@ jobs:
     steps:
       - checkout
       - run: sudo apt update && sudo apt install -y gcc
+      - run: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.21.0
       - run: ./dep.sh
       - run: mkdir -p /tmp/pikv
-      - run: env GO111MODULE=on go build
-      - run: env GO111MODULE=on go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
+      - run: env GO111MODULE=on make fmt-check
+      - run: env GO111MODULE=on make build
+      - run: env GO111MODULE=on make test
       - run: bash <(curl -s https://codecov.io/bash)
   install:
     docker:
