@@ -5,7 +5,7 @@ GOFMT ?= gofmt "-s"
 VERSION := v$(shell cat VERSION.go | grep -o -e '[0-9].[0-9].[0-9]')
 
 .PHONY: all
-all: install protoc build
+all: install build
 
 .PHONY: install
 install:
