@@ -1,6 +1,6 @@
 # PiKV
 
-<img width="128px" src="logo.png" alt="logo">
+<img width="256px" src="logo.png" alt="logo">
 
 ![GitHub release](https://img.shields.io/github/tag/joway/pikv.svg?label=release)
 [![Go Report Card](https://goreportcard.com/badge/github.com/joway/pikv)](https://goreportcard.com/report/github.com/joway/pikv)
