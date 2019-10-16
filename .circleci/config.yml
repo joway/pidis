@@ -1,16 +1,17 @@
 version: 2
 jobs:
-  build:
+  test:
     docker:
       - image: circleci/golang:1.11
     working_directory: /go/src/github.com/joway/pikv
     steps:
       - checkout
       - run: sudo apt update && sudo apt install -y gcc
-      - run: ./dep.sh
+      - run: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.21.0
       - run: mkdir -p /tmp/pikv
-      - run: env GO111MODULE=on go build
-      - run: env GO111MODULE=on go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
+      - run: env GO111MODULE=on make
+      - run: env GO111MODULE=on make fmt-check
+      - run: env GO111MODULE=on make test
       - run: bash <(curl -s https://codecov.io/bash)
   install:
     docker:
@@ -19,9 +20,29 @@ jobs:
       - run: mkdir -p ~/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
       - run: go get github.com/joway/pikv
       - run: pikv -v
+  publish:
+    docker:
+      - image: circleci/buildpack-deps:stretch
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: make docker-build
+      - run:
+        name: Publish Docker Image to Docker Hub
+        command: |
+          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKERHUB_USER" --password-stdin
+          make docker-push
 workflows:
   version: 2
   pipeline:
     jobs:
-      - build
+      - test
       - install
+      - publish:
+          context: docker
+          requires:
+            - test
+            - install
+          filters:
+            branches:
+              only: master

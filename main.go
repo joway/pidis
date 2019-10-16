@@ -24,7 +24,7 @@ type Config struct {
 func main() {
 	app := cli.NewApp()
 	app.Name = "pikv"
-	app.Version = "0.0.1"
+	app.Version = VERSION
 	app.Usage = ""
 	cli.VersionFlag = cli.BoolFlag{
 		Name: "version, v",
