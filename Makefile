@@ -5,12 +5,17 @@ GOFMT ?= gofmt "-s"
 VERSION := v$(shell cat VERSION.go | grep -o -e '[0-9].[0-9].[0-9]')
 
 .PHONY: all
-all: install build
+all: install protoc build
 
 .PHONY: install
 install:
 	@echo ">> install dependence"
 	@exec ./bin/dep.sh
+
+.PHONY: protoc
+protoc:
+	@echo ">> gen protobuf"
+	@protoc --go_out=plugins=grpc:. ./rpc/**/*.proto
 
 .PHONY: release
 release:
