@@ -61,9 +61,9 @@ func (s *PiKVService) Oplog(req *proto.OplogReq, srv proto.PiKV_OplogServer) err
 		err = s.db.Sync(ctx, bus, req.Offset)
 	}()
 	logger.Info("Sending oplog")
-	for line := range bus.Read() {
+	for payload := range bus.Read() {
 		resp := &proto.OplogResp{
-			Payload: line,
+			Payload: payload,
 		}
 		if err := srv.Send(resp); err != nil {
 			return err

@@ -19,6 +19,23 @@ func setupAOFBus() {
 	_ = os.MkdirAll(tmpAofDir, os.ModePerm)
 }
 
+func TestDecode(t *testing.T) {
+	text := []byte("*4\r\n$12\r\n000000000000\r\n$3\r\nset\r\n$1\r\nk\r\n$1\r\nv\r\n" +
+		"*3\r\n$12\r\n000000000000\r\n$3\r\nget\r\n$1\r\nk\r\n")
+	uid, args, leftover, err := Decode(text)
+	assert.NoError(t, err)
+	assert.Equal(t, "000000000000", string(uid))
+	assert.Equal(t, "*3\r\n$12\r\n000000000000\r\n$3\r\nget\r\n$1\r\nk\r\n", string(leftover))
+	assert.Equal(t, "set k v", string(bytes.Join(args, []byte(" "))))
+}
+
+func TestEncode(t *testing.T) {
+	uid := NewUID().Bytes()
+	args := [][]byte{[]byte("set"), []byte("k"), []byte("v")}
+	encoded := Encode(uid, args)
+	assert.Equal(t, fmt.Sprintf("*4\r\n$12\r\n%s\r\n$3\r\nset\r\n$1\r\nk\r\n$1\r\nv\r\n", uid), string(encoded))
+}
+
 func TestAOFBus(t *testing.T) {
 	setupAOFBus()
 
@@ -37,8 +54,13 @@ func TestAOFBus(t *testing.T) {
 	stream := util.NewStreamBus()
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 	go func() {
-		if err := bus.Sync(ctx, stream, offset); err != nil {
-			assert.NoError(t, err)
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			if err := bus.Sync(ctx, stream, offset); err != nil {
+				assert.NoError(t, err)
+			}
 		}
 	}()
 
@@ -46,13 +68,20 @@ func TestAOFBus(t *testing.T) {
 	for {
 		select {
 		case <-ctx.Done():
-			assert.Equal(t, total, 99)
+			assert.Equal(t, 99, total)
 			return
-		case line := <-stream.Read():
-			total += 1
-			ts, args := bus.DecodeLine(line)
-			assert.True(t, bytes.Compare(offset, ts) <= 0)
-			assert.Equal(t, string(args[1]), fmt.Sprintf("k%d", total))
+		case content := <-stream.Read():
+			for {
+				ts, args, leftover, err := Decode(content)
+				assert.NoError(t, err)
+				if ts == nil && args == nil {
+					break
+				}
+				total += 1
+				assert.True(t, bytes.Compare(offset, ts) <= 0)
+				assert.Equal(t, string(args[1]), fmt.Sprintf("k%d", total))
+				content = leftover
+			}
 		}
 	}
 }

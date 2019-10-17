@@ -252,7 +252,10 @@ restore:
 			line := resp.GetPayload()
 			//TODO: concurrent
 			//replay oplog
-			_, args := db.aofBus.DecodeLine(line)
+			_, args, _, err := Decode(line)
+			if err != nil {
+				return errors.Wrap(err, "parse oplog failed")
+			}
 			_, err = db.IExec(args)
 			if err != nil {
 				return errors.Wrap(err, "replay oplog failed")

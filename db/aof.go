@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
-	"fmt"
+	"github.com/joway/pikv/common"
+	"github.com/tidwall/redcon"
 	"io"
 	"os"
 	"time"
@@ -19,6 +19,27 @@ type AOFBus struct {
 
 	file   *os.File
 	buffer *bufio.Writer
+}
+
+func Encode(uid []byte, args [][]byte) []byte {
+	var encoded []byte
+	encoded = redcon.AppendArray(encoded, len(args)+1)
+	encoded = redcon.AppendBulk(encoded, uid)
+	for _, arg := range args {
+		encoded = redcon.AppendBulk(encoded, arg)
+	}
+	return encoded
+}
+
+func Decode(content []byte) (uid []byte, args [][]byte, leftover []byte, err error) {
+	isCompleted, args, _, leftover, err := redcon.ReadNextCommand(content, nil)
+	if err != nil {
+		return nil, nil, content, common.ErrInvalidAOFFormat
+	}
+	if !isCompleted {
+		return nil, nil, content, nil
+	}
+	return args[0], args[1:], leftover, nil
 }
 
 func NewAOFBus(path string, offsetSize int) (*AOFBus, error) {
@@ -37,20 +58,9 @@ func NewAOFBus(path string, offsetSize int) (*AOFBus, error) {
 	}, nil
 }
 
-func (b AOFBus) EncodeLine(uid []byte, args [][]byte) []byte {
-	fullCmd := bytes.Join(args, []byte(" "))
-	return append(uid, fullCmd...)
-}
-
-func (b AOFBus) DecodeLine(line []byte) (offset []byte, args [][]byte) {
-	offset = line[:b.offsetSize]
-	args = bytes.Split(line[b.offsetSize:], []byte(" "))
-	return offset, args
-}
-
 func (b *AOFBus) Append(args [][]byte) error {
 	uid := NewUID()
-	line := append(b.EncodeLine(uid.Bytes(), args), '\n')
+	line := Encode(uid.Bytes(), args)
 	if _, err := b.buffer.Write(line); err != nil {
 		return err
 	}
@@ -74,30 +84,50 @@ func (b *AOFBus) Sync(ctx context.Context, writer io.Writer, offset []byte) erro
 		return err
 	}
 	rd := bufio.NewReader(aofFile)
+
+	//1. Find the position by offset
+	var buffer []byte
+	buf := make([]byte, 1024)
+	var packet []byte
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
-			//TODO: care about isPrefix == true
-			line, _, err := rd.ReadLine()
-			if err == io.EOF {
+			size, err := rd.Read(buf)
+			if err == io.EOF || size == 0 {
 				time.Sleep(time.Millisecond * 10)
 				continue
 			}
 			if err != nil {
 				return err
 			}
-			if len(line) < b.offsetSize {
-				return errors.New(fmt.Sprintf("Invalid aof format: %b", line))
-			}
-			timestamp := line[:b.offsetSize]
-			if offset != nil && bytes.Compare(timestamp, offset) < 0 {
-				continue
+
+			buffer = append(buffer, buf[:size]...)
+			//parser sections
+			for {
+				uid, args, leftover, err := Decode(buffer)
+				if err != nil {
+					return err
+				}
+				//uncompleted buffer
+				if uid == nil && args == nil {
+					break
+				}
+				if bytes.Compare(uid, offset) < 0 {
+					buffer = leftover
+					//skip
+					continue
+				}
+				packet = append(packet, buffer[:len(buffer)-len(leftover)]...)
+				buffer = leftover
 			}
 
-			if _, err := writer.Write(line); err != nil {
-				return err
+			if packet != nil {
+				if _, err := writer.Write(packet); err != nil {
+					return err
+				}
+				packet = nil
 			}
 		}
 	}

@@ -8,6 +8,8 @@ var (
 	ErrNodeReadOnly   = errors.New("ERR node read only")
 	ErrNodeIsMaster   = errors.New("ERR node is master")
 
+	ErrInvalidAOFFormat = errors.New("ERR invalid aof format")
+
 	ErrCloseConn = errors.New("ERR close connection")
 	ErrShutdown  = errors.New("ERR shutdown node")
 

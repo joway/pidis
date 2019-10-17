@@ -63,13 +63,12 @@ func TestDatabase_SlaveOf(t *testing.T) {
 
 	output, err = follower.Exec(util.CommandToArgs("get k"))
 	assert.NoError(t, err)
-	assert.Equal(t, output[4], byte('x'))
+	assert.Equal(t, byte('x'), output[4])
 	output, err = follower.Exec(util.CommandToArgs("get k1"))
 	assert.NoError(t, err)
-	assert.Equal(t, string(output[4:7]), "xxx")
+	assert.Equal(t, "xxx", string(output[4:7]))
 	output, err = follower.Exec(util.CommandToArgs("get k2"))
 	assert.NoError(t, err)
-	assert.Equal(t, string(output[4:7]), "xxx")
 }
 
 func TestDatabase_Snapshot(t *testing.T) {
