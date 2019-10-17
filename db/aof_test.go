@@ -22,7 +22,7 @@ func setupAOFBus() {
 func TestDecode(t *testing.T) {
 	text := []byte("*4\r\n$12\r\n000000000000\r\n$3\r\nset\r\n$1\r\nk\r\n$1\r\nv\r\n" +
 		"*3\r\n$12\r\n000000000000\r\n$3\r\nget\r\n$1\r\nk\r\n")
-	uid, args, leftover, err := Decode(text)
+	uid, args, leftover, err := DecodeAOF(text)
 	assert.NoError(t, err)
 	assert.Equal(t, "000000000000", string(uid))
 	assert.Equal(t, "*3\r\n$12\r\n000000000000\r\n$3\r\nget\r\n$1\r\nk\r\n", string(leftover))
@@ -32,7 +32,7 @@ func TestDecode(t *testing.T) {
 func TestEncode(t *testing.T) {
 	uid := NewUID().Bytes()
 	args := [][]byte{[]byte("set"), []byte("k"), []byte("v")}
-	encoded := Encode(uid, args)
+	encoded := EncodeAOF(uid, args)
 	assert.Equal(t, fmt.Sprintf("*4\r\n$12\r\n%s\r\n$3\r\nset\r\n$1\r\nk\r\n$1\r\nv\r\n", uid), string(encoded))
 }
 
@@ -72,7 +72,7 @@ func TestAOFBus(t *testing.T) {
 			return
 		case content := <-stream.Read():
 			for {
-				ts, args, leftover, err := Decode(content)
+				ts, args, leftover, err := DecodeAOF(content)
 				assert.NoError(t, err)
 				if ts == nil && args == nil {
 					break

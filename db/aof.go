@@ -21,7 +21,7 @@ type AOFBus struct {
 	buffer *bufio.Writer
 }
 
-func Encode(uid []byte, args [][]byte) []byte {
+func EncodeAOF(uid []byte, args [][]byte) []byte {
 	var encoded []byte
 	encoded = redcon.AppendArray(encoded, len(args)+1)
 	encoded = redcon.AppendBulk(encoded, uid)
@@ -31,7 +31,7 @@ func Encode(uid []byte, args [][]byte) []byte {
 	return encoded
 }
 
-func Decode(content []byte) (uid []byte, args [][]byte, leftover []byte, err error) {
+func DecodeAOF(content []byte) (uid []byte, args [][]byte, leftover []byte, err error) {
 	isCompleted, args, _, leftover, err := redcon.ReadNextCommand(content, nil)
 	if err != nil {
 		return nil, nil, content, common.ErrInvalidAOFFormat
@@ -60,7 +60,7 @@ func NewAOFBus(path string, offsetSize int) (*AOFBus, error) {
 
 func (b *AOFBus) Append(args [][]byte) error {
 	uid := NewUID()
-	line := Encode(uid.Bytes(), args)
+	line := EncodeAOF(uid.Bytes(), args)
 	if _, err := b.buffer.Write(line); err != nil {
 		return err
 	}
@@ -87,6 +87,7 @@ func (b *AOFBus) Sync(ctx context.Context, writer io.Writer, offset []byte) erro
 
 	//1. Find the position by offset
 	var buffer []byte
+	//TODO: tuning
 	buf := make([]byte, 1024)
 	var packet []byte
 	for {
@@ -96,6 +97,7 @@ func (b *AOFBus) Sync(ctx context.Context, writer io.Writer, offset []byte) erro
 		default:
 			size, err := rd.Read(buf)
 			if err == io.EOF || size == 0 {
+				//TODO: tuning
 				time.Sleep(time.Millisecond * 10)
 				continue
 			}
@@ -106,7 +108,7 @@ func (b *AOFBus) Sync(ctx context.Context, writer io.Writer, offset []byte) erro
 			buffer = append(buffer, buf[:size]...)
 			//parser sections
 			for {
-				uid, args, leftover, err := Decode(buffer)
+				uid, args, leftover, err := DecodeAOF(buffer)
 				if err != nil {
 					return err
 				}
