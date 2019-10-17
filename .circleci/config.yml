@@ -47,9 +47,11 @@ workflows:
       - install
       - publish:
           context: docker
-          requires:
-            - test
-            - install
           filters:
             tags:
               only: /^v.*/
+            branches:
+              ignore: /.*/
+          requires:
+            - test
+            - install
