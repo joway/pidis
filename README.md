@@ -9,10 +9,13 @@
 
 A redis protocol compatible key-value store. It's built on top of [Badger](https://github.com/dgraph-io/badger).
 
-## Feature
+## TODO
 
 - [x] Master-Slave Architecture
+- [ ] Config with toml file
+- [ ] Benchmark between redis,ledisdb,pikv
 - [ ] Slave of with key prefix
+- [ ] ~100% test coverage
 
 ## Get Start
 

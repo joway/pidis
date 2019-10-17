@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"github.com/dgraph-io/badger"
 	"io"
 	"time"
@@ -26,9 +27,12 @@ func (storage *BadgerStorage) Close() error {
 }
 
 func (storage *BadgerStorage) Get(key []byte) ([]byte, error) {
-	var output []byte
+	var output []byte = nil
 	err := storage.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(key)
+		if err == badger.ErrKeyNotFound {
+			return nil
+		}
 		if err != nil {
 			return err
 		}
@@ -69,7 +73,7 @@ func (storage *BadgerStorage) Del(keys [][]byte) error {
 	})
 }
 
-func (storage *BadgerStorage) Snapshot(writer io.Writer) error {
+func (storage *BadgerStorage) Snapshot(ctx context.Context, writer io.Writer) error {
 	_, err := storage.db.Backup(writer, 0)
 	if err != nil {
 		return err
@@ -77,7 +81,7 @@ func (storage *BadgerStorage) Snapshot(writer io.Writer) error {
 	return nil
 }
 
-func (storage *BadgerStorage) LoadSnapshot(reader io.Reader) error {
+func (storage *BadgerStorage) LoadSnapshot(ctx context.Context, reader io.Reader) error {
 	//TODO: custom maxPendingWrites
 	return storage.db.Load(reader, 256)
 }

@@ -4,94 +4,132 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"github.com/rs/xid"
+	"github.com/joway/pikv/common"
+	"github.com/tidwall/redcon"
 	"io"
 	"os"
+	"time"
 )
-
-const (
-	offsetSize = 12
-)
-
-func AOFEncode(uuid []byte, args [][]byte) []byte {
-	fullCmd := bytes.Join(args, []byte(" "))
-	return append(append(uuid, fullCmd...), '\n')
-}
-
-func AOFDecode(line []byte) (offset []byte, args [][]byte) {
-	offset = line[:offsetSize]
-	args = bytes.Split(line[offsetSize:], []byte(" "))
-	return offset, args
-}
 
 type AOFBus struct {
-	filePath string
+	path string
 
-	appendFile   *os.File
-	appendBuffer *bufio.Writer
+	//format
+	offsetSize int
+
+	file   *os.File
+	buffer *bufio.Writer
 }
 
-func NewAOFBus(filePath string) (*AOFBus, error) {
-	appendFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_APPEND|os.O_CREATE, os.ModePerm)
+func EncodeAOF(uid []byte, args [][]byte) []byte {
+	var encoded []byte
+	encoded = redcon.AppendArray(encoded, len(args)+1)
+	encoded = redcon.AppendBulk(encoded, uid)
+	for _, arg := range args {
+		encoded = redcon.AppendBulk(encoded, arg)
+	}
+	return encoded
+}
+
+func DecodeAOF(content []byte) (uid []byte, args [][]byte, leftover []byte, err error) {
+	isCompleted, args, _, leftover, err := redcon.ReadNextCommand(content, nil)
+	if err != nil {
+		return nil, nil, content, common.ErrInvalidAOFFormat
+	}
+	if !isCompleted {
+		return nil, nil, content, nil
+	}
+	return args[0], args[1:], leftover, nil
+}
+
+func NewAOFBus(path string, offsetSize int) (*AOFBus, error) {
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
-	appendBuffer := bufio.NewWriter(appendFile)
+	buffer := bufio.NewWriter(file)
 
 	return &AOFBus{
-		filePath: filePath,
+		path:       path,
+		offsetSize: offsetSize,
 
-		appendFile:   appendFile,
-		appendBuffer: appendBuffer,
+		file:   file,
+		buffer: buffer,
 	}, nil
 }
 
-func (w *AOFBus) Append(cmd [][]byte) error {
-	guid := xid.New()
-	line := AOFEncode(guid.Bytes(), cmd)
-	if _, err := w.appendBuffer.Write(line); err != nil {
+func (b *AOFBus) Append(args [][]byte) error {
+	uid := NewUID()
+	line := EncodeAOF(uid.Bytes(), args)
+	if _, err := b.buffer.Write(line); err != nil {
 		return err
 	}
 
 	//TODO: performance
-	return w.Flush()
+	return b.Flush()
 }
 
-func (w *AOFBus) Flush() error {
-	return w.appendBuffer.Flush()
+func (b *AOFBus) Flush() error {
+	return b.buffer.Flush()
 }
 
-func (w *AOFBus) Close() error {
-	return w.appendFile.Close()
+func (b *AOFBus) Close() error {
+	return b.file.Close()
 }
 
-func (w *AOFBus) Sync(context context.Context, writer io.Writer, offset []byte) error {
-	aofFile, err := os.OpenFile(w.filePath, os.O_RDONLY, os.ModePerm)
+func (b *AOFBus) Sync(ctx context.Context, writer io.Writer, offset []byte) error {
+	aofFile, err := os.OpenFile(b.path, os.O_RDONLY, os.ModePerm)
 	defer aofFile.Close()
 	if err != nil {
 		return err
 	}
 	rd := bufio.NewReader(aofFile)
+
+	//1. Find the position by offset
+	var buffer []byte
+	//TODO: tuning
+	buf := make([]byte, 1024)
+	var packet []byte
 	for {
 		select {
-		case <-context.Done():
+		case <-ctx.Done():
 			return nil
 		default:
-			//TODO: care about isPrefix == true
-			line, _, err := rd.ReadLine()
-			if err == io.EOF {
-				break
+			size, err := rd.Read(buf)
+			if err == io.EOF || size == 0 {
+				//TODO: tuning
+				time.Sleep(time.Millisecond * 10)
+				continue
 			}
 			if err != nil {
 				return err
 			}
-			timestamp := line[:offsetSize]
-			if offset != nil && bytes.Compare(timestamp, offset) < 0 {
-				continue
+
+			buffer = append(buffer, buf[:size]...)
+			//parser sections
+			for {
+				uid, args, leftover, err := DecodeAOF(buffer)
+				if err != nil {
+					return err
+				}
+				//uncompleted buffer
+				if uid == nil && args == nil {
+					break
+				}
+				if bytes.Compare(uid, offset) < 0 {
+					buffer = leftover
+					//skip
+					continue
+				}
+				packet = append(packet, buffer[:len(buffer)-len(leftover)]...)
+				buffer = leftover
 			}
 
-			if _, err := writer.Write(line); err != nil {
-				return err
+			if packet != nil {
+				if _, err := writer.Write(packet); err != nil {
+					return err
+				}
+				packet = nil
 			}
 		}
 	}

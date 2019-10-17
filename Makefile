@@ -2,6 +2,7 @@ PROJECT_NAME = pikv
 PACKAGES ?= $(shell go list ./... | grep -v /vendor/)
 GOFILES := $(shell find . -name "*.go" -type f -not -path "./vendor/*")
 GOFMT ?= gofmt "-s"
+GO_BUILD_TAGS = -a -ldflags '-extldflags "-static"'
 VERSION := v$(shell cat VERSION.go | grep -o -e '[0-9].[0-9].[0-9]')
 
 .PHONY: all
@@ -10,7 +11,7 @@ all: install build
 .PHONY: install
 install:
 	@echo ">> install dependence"
-	@exec ./bin/dep.sh
+	@exec ./tools/dep.sh
 
 .PHONY: protoc
 protoc:
@@ -46,7 +47,7 @@ fmt-check:
 .PHONY: build
 build: $(GOFILES)
 	@echo ">> building binaries"
-	@CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o pikv
+	@CGO_ENABLED=0 go build $(GO_BUILD_TAGS) -o bin/pikv cmd/pikv/*
 
 .PHONY: docker-build
 docker-build:

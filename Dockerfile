@@ -6,6 +6,6 @@ RUN make
 
 FROM golang:1.12-alpine
 
-COPY --from=0 /go/src/github.com/joway/pikv/pikv /usr/bin/pikv
+COPY --from=0 /go/src/github.com/joway/pikv/bin/* /usr/bin/
 
 ENTRYPOINT ["pikv"]

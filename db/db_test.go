@@ -2,37 +2,38 @@ package db
 
 import (
 	"bufio"
+	"context"
 	"github.com/joway/pikv/rpc"
 	"github.com/joway/pikv/util"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net"
 	"os"
+	"path"
 	"testing"
 	"time"
 )
 
+var tmpDbDir = "/tmp/pikv/db"
+
 func setup() {
-	_ = os.RemoveAll("/tmp/pikv")
+	_ = os.RemoveAll(tmpDbDir)
+	_ = os.MkdirAll(tmpDbDir, os.ModePerm)
 }
 
 func TestDatabase_SlaveOf(t *testing.T) {
 	setup()
 
 	leader, err := New(Options{
-		DBDir: "/tmp/pikv/leader",
+		DBDir: path.Join(tmpDbDir, "leader"),
 	})
 	assert.NoError(t, err)
 	follower, err := New(Options{
-		DBDir: "/tmp/pikv/follower",
+		DBDir: path.Join(tmpDbDir, "follower"),
 	})
 	assert.NoError(t, err)
 	leader.Run()
 	follower.Run()
-	//defer func() {
-	//	leader.Close()
-	//	follower.Close()
-	//}()
 
 	leaderListen, err := net.Listen("tcp", ":10001")
 	assert.NoError(t, err)
@@ -62,41 +63,41 @@ func TestDatabase_SlaveOf(t *testing.T) {
 
 	output, err = follower.Exec(util.CommandToArgs("get k"))
 	assert.NoError(t, err)
-	assert.Equal(t, output[4], byte('x'))
+	assert.Equal(t, byte('x'), output[4])
 	output, err = follower.Exec(util.CommandToArgs("get k1"))
 	assert.NoError(t, err)
-	assert.Equal(t, string(output[4:7]), "xxx")
+	assert.Equal(t, "xxx", string(output[4:7]))
 	output, err = follower.Exec(util.CommandToArgs("get k2"))
 	assert.NoError(t, err)
-	assert.Equal(t, string(output[4:7]), "xxx")
 }
 
 func TestDatabase_Snapshot(t *testing.T) {
 	setup()
+	ctx := context.Background()
 
 	db, err := New(Options{
-		DBDir: "/tmp/pikv",
+		DBDir: tmpDbDir,
 	})
 	assert.NoError(t, err)
 
 	_, err = db.Exec(util.CommandToArgs("set a x"))
 	assert.NoError(t, err)
 
-	f, err := os.OpenFile("/tmp/pikv/pikv.snap", os.O_RDWR|os.O_CREATE, os.ModePerm)
+	f, err := os.OpenFile(path.Join(tmpDbDir, "pikv.snap"), os.O_RDWR|os.O_CREATE, os.ModePerm)
 	defer f.Close()
 	writer := bufio.NewWriter(f)
-	err = db.Snapshot(writer)
+	err = db.Snapshot(ctx, writer)
 	assert.NoError(t, err)
 	err = writer.Flush()
 	assert.NoError(t, err)
 
 	newDb, err := New(Options{
-		DBDir: "/tmp/pikv/new",
+		DBDir: path.Join(tmpDbDir, "new"),
 	})
 	assert.NoError(t, err)
 	_, err = f.Seek(0, io.SeekStart)
 	assert.NoError(t, err)
-	err = newDb.LoadSnapshot(f)
+	err = newDb.LoadSnapshot(ctx, f)
 	assert.NoError(t, err)
 	output, err := newDb.Exec(util.CommandToArgs("get a"))
 	assert.Equal(t, output[4], byte('x'))

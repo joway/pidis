@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/joway/loki"
+	"github.com/joway/pikv"
 	"github.com/joway/pikv/common"
 	"github.com/joway/pikv/db"
 	"github.com/joway/pikv/rpc"
@@ -24,7 +25,7 @@ type Config struct {
 func main() {
 	app := cli.NewApp()
 	app.Name = "pikv"
-	app.Version = VERSION
+	app.Version = pikv.VERSION
 	app.Usage = ""
 	cli.VersionFlag = cli.BoolFlag{
 		Name: "version, v",
@@ -56,8 +57,7 @@ func main() {
 		return setup(cfg)
 	}
 
-	err := app.Run(os.Args)
-	if err != nil {
+	if err := app.Run(os.Args); err != nil {
 		logger.Fatal("%v", err)
 	}
 }
