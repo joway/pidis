@@ -43,8 +43,14 @@ workflows:
   version: 2
   pipeline:
     jobs:
-      - test
-      - install
+      - test:
+          filters:
+            tags:
+              only: /.*/
+      - install:
+          filters:
+            tags:
+              only: /.*/
       - publish:
           context: docker
           filters:
