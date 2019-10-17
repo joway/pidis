@@ -34,7 +34,7 @@ func (storage *MemoryStorage) Set(key, val []byte, ttl int64) error {
 }
 
 func (storage *MemoryStorage) Del(keys [][]byte) error {
-	for key := range keys {
+	for _, key := range keys {
 		storage.db.Delete(string(key))
 	}
 	return nil
