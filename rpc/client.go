@@ -8,7 +8,7 @@ import (
 	"github.com/joway/pikv/util"
 )
 
-var logger = loki.New("rpc:server")
+var logger = loki.New("rpc:client")
 
 type PiKVService struct {
 	proto.UnimplementedPiKVServer
@@ -23,12 +23,16 @@ func NewPiKVService(db common.Database) *PiKVService {
 }
 
 func (s *PiKVService) Snapshot(req *proto.SnapshotReq, srv proto.PiKV_SnapshotServer) error {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	bus := util.NewStreamBus()
 	var err error = nil
 	go func() {
 		defer bus.Close()
 		logger.Info("Fetching snapshot")
-		err = s.db.Snapshot(bus)
+		err = s.db.Snapshot(ctx, bus)
 	}()
 	logger.Info("Sending snapshot")
 	for buffer := range bus.Read() {
@@ -49,12 +53,12 @@ func (s *PiKVService) Snapshot(req *proto.SnapshotReq, srv proto.PiKV_SnapshotSe
 
 func (s *PiKVService) Oplog(req *proto.OplogReq, srv proto.PiKV_OplogServer) error {
 	bus := util.NewStreamBus()
-	ctx := context.TODO()
+	ctx := context.Background()
 	var err error = nil
 	go func() {
 		defer bus.Close()
 		logger.Info("Fetching oplog")
-		err = s.db.SyncOplog(ctx, bus, req.Offset)
+		err = s.db.Sync(ctx, bus, req.Offset)
 	}()
 	logger.Info("Sending oplog")
 	for line := range bus.Read() {

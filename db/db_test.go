@@ -2,6 +2,7 @@ package db
 
 import (
 	"bufio"
+	"context"
 	"github.com/joway/pikv/rpc"
 	"github.com/joway/pikv/util"
 	"github.com/stretchr/testify/assert"
@@ -73,6 +74,7 @@ func TestDatabase_SlaveOf(t *testing.T) {
 
 func TestDatabase_Snapshot(t *testing.T) {
 	setup()
+	ctx := context.Background()
 
 	db, err := New(Options{
 		DBDir: "/tmp/pikv",
@@ -85,7 +87,7 @@ func TestDatabase_Snapshot(t *testing.T) {
 	f, err := os.OpenFile("/tmp/pikv/pikv.snap", os.O_RDWR|os.O_CREATE, os.ModePerm)
 	defer f.Close()
 	writer := bufio.NewWriter(f)
-	err = db.Snapshot(writer)
+	err = db.Snapshot(ctx, writer)
 	assert.NoError(t, err)
 	err = writer.Flush()
 	assert.NoError(t, err)
@@ -96,7 +98,7 @@ func TestDatabase_Snapshot(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = f.Seek(0, io.SeekStart)
 	assert.NoError(t, err)
-	err = newDb.LoadSnapshot(f)
+	err = newDb.LoadSnapshot(ctx, f)
 	assert.NoError(t, err)
 	output, err := newDb.Exec(util.CommandToArgs("get a"))
 	assert.Equal(t, output[4], byte('x'))

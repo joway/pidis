@@ -10,3 +10,11 @@ func CommandToArgs(cmd string) [][]byte {
 	}
 	return args
 }
+
+func ArgsToCommand(args [][]byte) string {
+	cmd := ""
+	for _, arg := range args {
+		cmd += string(arg) + " "
+	}
+	return cmd
+}

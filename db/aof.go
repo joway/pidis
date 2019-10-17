@@ -4,69 +4,69 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"github.com/rs/xid"
 	"io"
 	"os"
+	"time"
 )
-
-const (
-	offsetSize = 12
-)
-
-func AOFEncode(uuid []byte, args [][]byte) []byte {
-	fullCmd := bytes.Join(args, []byte(" "))
-	return append(append(uuid, fullCmd...), '\n')
-}
-
-func AOFDecode(line []byte) (offset []byte, args [][]byte) {
-	offset = line[:offsetSize]
-	args = bytes.Split(line[offsetSize:], []byte(" "))
-	return offset, args
-}
 
 type AOFBus struct {
-	filePath string
+	path string
 
-	appendFile   *os.File
-	appendBuffer *bufio.Writer
+	//format
+	offsetSize int
+
+	file   *os.File
+	buffer *bufio.Writer
 }
 
-func NewAOFBus(filePath string) (*AOFBus, error) {
-	appendFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_APPEND|os.O_CREATE, os.ModePerm)
+func NewAOFBus(path string, offsetSize int) (*AOFBus, error) {
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
-	appendBuffer := bufio.NewWriter(appendFile)
+	buffer := bufio.NewWriter(file)
 
 	return &AOFBus{
-		filePath: filePath,
+		path:       path,
+		offsetSize: offsetSize,
 
-		appendFile:   appendFile,
-		appendBuffer: appendBuffer,
+		file:   file,
+		buffer: buffer,
 	}, nil
 }
 
-func (w *AOFBus) Append(cmd [][]byte) error {
-	guid := xid.New()
-	line := AOFEncode(guid.Bytes(), cmd)
-	if _, err := w.appendBuffer.Write(line); err != nil {
+func (b AOFBus) EncodeLine(uid []byte, args [][]byte) []byte {
+	fullCmd := bytes.Join(args, []byte(" "))
+	return append(uid, fullCmd...)
+}
+
+func (b AOFBus) DecodeLine(line []byte) (offset []byte, args [][]byte) {
+	offset = line[:b.offsetSize]
+	args = bytes.Split(line[b.offsetSize:], []byte(" "))
+	return offset, args
+}
+
+func (b *AOFBus) Append(cmd [][]byte) error {
+	uid := NewUID()
+	line := b.EncodeLine(uid.Bytes(), cmd)
+	if _, err := b.buffer.Write(append(line, '\n')); err != nil {
 		return err
 	}
 
 	//TODO: performance
-	return w.Flush()
+	return b.Flush()
 }
 
-func (w *AOFBus) Flush() error {
-	return w.appendBuffer.Flush()
+func (b *AOFBus) Flush() error {
+	return b.buffer.Flush()
 }
 
-func (w *AOFBus) Close() error {
-	return w.appendFile.Close()
+func (b *AOFBus) Close() error {
+	return b.file.Close()
 }
 
-func (w *AOFBus) Sync(context context.Context, writer io.Writer, offset []byte) error {
-	aofFile, err := os.OpenFile(w.filePath, os.O_RDONLY, os.ModePerm)
+func (b *AOFBus) Sync(ctx context.Context, writer io.Writer, offset []byte) error {
+	aofFile, err := os.OpenFile(b.path, os.O_RDONLY, os.ModePerm)
 	defer aofFile.Close()
 	if err != nil {
 		return err
@@ -74,18 +74,19 @@ func (w *AOFBus) Sync(context context.Context, writer io.Writer, offset []byte) 
 	rd := bufio.NewReader(aofFile)
 	for {
 		select {
-		case <-context.Done():
+		case <-ctx.Done():
 			return nil
 		default:
 			//TODO: care about isPrefix == true
 			line, _, err := rd.ReadLine()
 			if err == io.EOF {
-				break
+				time.Sleep(time.Millisecond * 10)
+				continue
 			}
 			if err != nil {
 				return err
 			}
-			timestamp := line[:offsetSize]
+			timestamp := line[:b.offsetSize]
 			if offset != nil && bytes.Compare(timestamp, offset) < 0 {
 				continue
 			}

@@ -9,7 +9,6 @@ import (
 	"github.com/joway/pikv/rpc/proto"
 	"github.com/joway/pikv/storage"
 	"github.com/pkg/errors"
-	"github.com/rs/xid"
 	"google.golang.org/grpc"
 	"io"
 	"os"
@@ -33,7 +32,7 @@ type Database struct {
 	following     *Node // slave of
 	followingConn *grpc.ClientConn
 
-	aofBuf *AOFBus
+	aofBus *AOFBus
 }
 
 func New(options Options) (*Database, error) {
@@ -51,8 +50,8 @@ func New(options Options) (*Database, error) {
 		return nil, err
 	}
 
-	//create aofBuf stream
-	aofBuf, err := NewAOFBus(aofFilePath)
+	//create aofBus stream
+	aofBuf, err := NewAOFBus(aofFilePath, UIDSize)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +62,7 @@ func New(options Options) (*Database, error) {
 
 		sigFollowing: make(chan bool),
 
-		aofBuf: aofBuf,
+		aofBus: aofBuf,
 	}
 
 	return database, nil
@@ -92,7 +91,7 @@ func (db *Database) IsWritable() bool {
 }
 
 func (db *Database) Record(cmd [][]byte) error {
-	return db.aofBuf.Append(cmd)
+	return db.aofBus.Append(cmd)
 }
 
 func (db *Database) Close() error {
@@ -100,10 +99,10 @@ func (db *Database) Close() error {
 	if err := db.followingConn.Close(); err != nil {
 		errs = append(errs, err)
 	}
-	if err := db.aofBuf.Flush(); err != nil {
+	if err := db.aofBus.Flush(); err != nil {
 		errs = append(errs, err)
 	}
-	if err := db.aofBuf.Close(); err != nil {
+	if err := db.aofBus.Close(); err != nil {
 		errs = append(errs, err)
 	}
 	if err := db.storage.Close(); err != nil {
@@ -140,7 +139,12 @@ func (db *Database) IExec(args [][]byte) (output []byte, err error) {
 }
 
 func (db *Database) Daemon() error {
-	var followingContext context.Context
+	ctx := context.Background()
+	var (
+		fCtx    context.Context
+		fCancel context.CancelFunc
+	)
+
 	for {
 		select {
 		case sig := <-db.sigFollowing:
@@ -150,14 +154,15 @@ func (db *Database) Daemon() error {
 						db.sigFollowing <- false
 					}()
 					logger.Info("following node %s", db.following)
-					followingContext = context.TODO()
-					if err := db.Following(followingContext); err != nil {
+
+					fCtx, fCancel = context.WithCancel(ctx)
+					if err := db.Following(fCtx); err != nil {
 						logger.Fatal("%v", err)
 					}
 				}()
 			} else {
 				logger.Info("removed following node %s", db.following)
-				followingContext.Done()
+				fCancel()
 			}
 		}
 	}
@@ -178,17 +183,16 @@ func (db *Database) SlaveOf(host, port string) error {
 	return nil
 }
 
-func (db *Database) Following(context context.Context) error {
+func (db *Database) Following(ctx context.Context) error {
 	if db.following == nil {
 		return common.ErrNodeIsMaster
 	}
 
 	client := proto.NewPiKVClient(db.followingConn)
-	offsetId := xid.New()
-	offset := xid.New().Bytes()
+	offsetId := NewUID()
 	//fetch snapshot
-	snapPath := path.Join(db.dir, fmt.Sprintf("%s.snapshot", string(offsetId.Time().Unix())))
-	snapStream, err := client.Snapshot(context, &proto.SnapshotReq{})
+	snapPath := path.Join(db.dir, fmt.Sprintf("%s.snapshot", offsetId.Timestamp()))
+	snapStream, err := client.Snapshot(ctx, &proto.SnapshotReq{})
 	if err != nil {
 		return errors.Wrap(err, "create snapshot stream failed")
 	}
@@ -198,65 +202,76 @@ func (db *Database) Following(context context.Context) error {
 	}
 	//save snapshot
 	for {
-		resp, err := snapStream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return errors.Wrap(err, "recv snapshot failed")
-		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			resp, err := snapStream.Recv()
+			if err == io.EOF {
+				goto restore
+			}
+			if err != nil {
+				return errors.Wrap(err, "recv snapshot failed")
+			}
 
-		content := resp.GetPayload()
-		if _, err := snapFile.Write(content); err != nil {
-			return errors.Wrap(err, "append snapshot file failed")
+			content := resp.GetPayload()
+			if _, err := snapFile.Write(content); err != nil {
+				return errors.Wrap(err, "append snapshot file failed")
+			}
 		}
 	}
-	//restore snapshot
-	_, _ = snapFile.Seek(0, io.SeekStart)
-	if err := db.LoadSnapshot(snapFile); err != nil {
-		return errors.Wrap(err, "load snapshot failed")
+restore:
+	{
+		//restore snapshot
+		_, _ = snapFile.Seek(0, io.SeekStart)
+		if err := db.LoadSnapshot(ctx, snapFile); err != nil {
+			return errors.Wrap(err, "load snapshot failed")
+		}
 	}
+
 	//fetch and replay oplog
-	oplogStream, err := client.Oplog(context, &proto.OplogReq{
-		Offset: offset,
+	oplogStream, err := client.Oplog(ctx, &proto.OplogReq{
+		Offset: offsetId.Bytes(),
 	})
 	if err != nil {
 		return errors.Wrap(err, "fetch oplog failed")
 	}
 	for {
-		resp, err := oplogStream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return errors.Wrap(err, "recv oplog failed")
-		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			resp, err := oplogStream.Recv()
+			if err == io.EOF {
+				return nil
+			}
+			if err != nil {
+				return errors.Wrap(err, "recv oplog failed")
+			}
 
-		line := resp.GetPayload()
-		fmt.Println("line", line)
-		//replay oplog
-		//TODO: concurrent
-		_, args := AOFDecode(line)
-		_, err = db.IExec(args)
-		if err != nil {
-			return errors.Wrap(err, "replay oplog failed")
+			line := resp.GetPayload()
+			//TODO: concurrent
+			//replay oplog
+			_, args := db.aofBus.DecodeLine(line)
+			_, err = db.IExec(args)
+			if err != nil {
+				return errors.Wrap(err, "replay oplog failed")
+			}
 		}
 	}
-
-	return nil
 }
 
-func (db *Database) SyncOplog(context context.Context, writer io.Writer, offset []byte) error {
-	return db.aofBuf.Sync(context, writer, offset)
+func (db *Database) Sync(ctx context.Context, writer io.Writer, offset []byte) error {
+	return db.aofBus.Sync(ctx, writer, offset)
 }
 
-func (db *Database) Snapshot(writer io.Writer) error {
-	if err := db.storage.Snapshot(writer); err != nil {
+func (db *Database) Snapshot(ctx context.Context, writer io.Writer) error {
+	if err := db.storage.Snapshot(ctx, writer); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (db *Database) LoadSnapshot(reader io.Reader) error {
-	return db.storage.LoadSnapshot(reader)
+func (db *Database) LoadSnapshot(ctx context.Context, reader io.Reader) error {
+	return db.storage.LoadSnapshot(ctx, reader)
 }

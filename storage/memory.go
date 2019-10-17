@@ -1,22 +1,19 @@
 package storage
 
-import "sync"
-
-type Map struct {
-	sync.RWMutex
-	store map[string][]byte
-}
+import (
+	"github.com/patrickmn/go-cache"
+	"time"
+)
 
 type MemoryStorage struct {
 	Storage
 
-	db Map
+	db *cache.Cache
 }
 
 func NewMemoryStorage(options Options) (Storage, error) {
-	return &MemoryStorage{db: Map{
-		store: map[string][]byte{},
-	}}, nil
+	db := cache.New(cache.NoExpiration, 1*time.Millisecond)
+	return &MemoryStorage{db: db}, nil
 }
 
 func (storage *MemoryStorage) Close() error {
@@ -24,27 +21,21 @@ func (storage *MemoryStorage) Close() error {
 }
 
 func (storage *MemoryStorage) Get(key []byte) ([]byte, error) {
-	storage.db.RLock()
-	val, ok := storage.db.store[string(key)]
-	storage.db.RUnlock()
+	val, ok := storage.db.Get(string(key))
 	if !ok {
 		return nil, nil
 	}
-	return val, nil
+	return val.([]byte), nil
 }
 
 func (storage *MemoryStorage) Set(key, val []byte, ttl int64) error {
-	storage.db.Lock()
-	storage.db.store[string(key)] = val
-	storage.db.Unlock()
+	storage.db.Set(string(key), val, time.Duration(ttl)*time.Millisecond)
 	return nil
 }
 
 func (storage *MemoryStorage) Del(keys [][]byte) error {
 	for key := range keys {
-		storage.db.Lock()
-		delete(storage.db.store, string(key))
-		storage.db.Unlock()
+		storage.db.Delete(string(key))
 	}
 	return nil
 }

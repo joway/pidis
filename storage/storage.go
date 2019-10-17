@@ -1,14 +1,18 @@
 package storage
 
-import "io"
+import (
+	"context"
+	"io"
+)
 
 type Storage interface {
 	Get(key []byte) ([]byte, error)
 	Set(key, val []byte, ttl int64) error
 	Del(keys [][]byte) error
 	Close() error
-	Snapshot(writer io.Writer) error
-	LoadSnapshot(reader io.Reader) error
+
+	Snapshot(ctx context.Context, writer io.Writer) error
+	LoadSnapshot(ctx context.Context, reader io.Reader) error
 }
 
 const (
