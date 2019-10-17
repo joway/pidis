@@ -1,11 +1,14 @@
 package util
 
+import "sync"
+
 type StreamBus struct {
-	ch chan []byte
+	mutex sync.Mutex
+	ch    chan []byte
 }
 
 func NewStreamBus() *StreamBus {
-	return &StreamBus{make(chan []byte, 1024)}
+	return &StreamBus{ch: make(chan []byte, 1024)}
 }
 
 func (w *StreamBus) Read() <-chan []byte {
@@ -13,7 +16,9 @@ func (w *StreamBus) Read() <-chan []byte {
 }
 
 func (w *StreamBus) Write(buf []byte) (int, error) {
+	w.mutex.Lock()
 	w.ch <- buf
+	w.mutex.Unlock()
 	return len(buf), nil
 }
 

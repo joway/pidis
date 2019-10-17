@@ -8,14 +8,16 @@ import (
 	"time"
 )
 
+var tmpStorageDir = "/tmp/pikv/storage"
+
 func setup() {
-	_ = os.RemoveAll("/tmp/pikv")
+	_ = os.RemoveAll(tmpStorageDir)
 }
 
 func TestBadgerStorage(t *testing.T) {
 	setup()
 
-	badgerStorage, err := NewBadgerStorage(Options{Dir: "/tmp/pikv"})
+	badgerStorage, err := NewBadgerStorage(Options{Dir: tmpStorageDir})
 	assert.NoError(t, err)
 	testStorage(t, badgerStorage)
 }
@@ -23,7 +25,7 @@ func TestBadgerStorage(t *testing.T) {
 func TestMemoryStorage(t *testing.T) {
 	setup()
 
-	memoryStorage, err := NewMemoryStorage(Options{Dir: "/tmp/pikv"})
+	memoryStorage, err := NewMemoryStorage(Options{})
 	assert.NoError(t, err)
 	testStorage(t, memoryStorage)
 }
@@ -31,7 +33,7 @@ func TestMemoryStorage(t *testing.T) {
 func TestBadgerStorageWithTTL(t *testing.T) {
 	setup()
 
-	badgerStorage, err := NewBadgerStorage(Options{Dir: "/tmp/pikv"})
+	badgerStorage, err := NewBadgerStorage(Options{Dir: tmpStorageDir})
 	assert.NoError(t, err)
 	testStorageWithTTL(t, badgerStorage)
 }
@@ -39,7 +41,7 @@ func TestBadgerStorageWithTTL(t *testing.T) {
 func TestMemoryStorageWithTTL(t *testing.T) {
 	setup()
 
-	memoryStorage, err := NewMemoryStorage(Options{Dir: "/tmp/pikv"})
+	memoryStorage, err := NewMemoryStorage(Options{})
 	assert.NoError(t, err)
 	testStorageWithTTL(t, memoryStorage)
 }

@@ -9,31 +9,31 @@ import (
 	"io"
 	"net"
 	"os"
+	"path"
 	"testing"
 	"time"
 )
 
+var tmpDbDir = "/tmp/pikv/db"
+
 func setup() {
-	_ = os.RemoveAll("/tmp/pikv")
+	_ = os.RemoveAll(tmpDbDir)
+	_ = os.MkdirAll(tmpDbDir, os.ModePerm)
 }
 
 func TestDatabase_SlaveOf(t *testing.T) {
 	setup()
 
 	leader, err := New(Options{
-		DBDir: "/tmp/pikv/leader",
+		DBDir: path.Join(tmpDbDir, "leader"),
 	})
 	assert.NoError(t, err)
 	follower, err := New(Options{
-		DBDir: "/tmp/pikv/follower",
+		DBDir: path.Join(tmpDbDir, "follower"),
 	})
 	assert.NoError(t, err)
 	leader.Run()
 	follower.Run()
-	//defer func() {
-	//	leader.Close()
-	//	follower.Close()
-	//}()
 
 	leaderListen, err := net.Listen("tcp", ":10001")
 	assert.NoError(t, err)
@@ -77,14 +77,14 @@ func TestDatabase_Snapshot(t *testing.T) {
 	ctx := context.Background()
 
 	db, err := New(Options{
-		DBDir: "/tmp/pikv",
+		DBDir: tmpDbDir,
 	})
 	assert.NoError(t, err)
 
 	_, err = db.Exec(util.CommandToArgs("set a x"))
 	assert.NoError(t, err)
 
-	f, err := os.OpenFile("/tmp/pikv/pikv.snap", os.O_RDWR|os.O_CREATE, os.ModePerm)
+	f, err := os.OpenFile(path.Join(tmpDbDir, "pikv.snap"), os.O_RDWR|os.O_CREATE, os.ModePerm)
 	defer f.Close()
 	writer := bufio.NewWriter(f)
 	err = db.Snapshot(ctx, writer)
@@ -93,7 +93,7 @@ func TestDatabase_Snapshot(t *testing.T) {
 	assert.NoError(t, err)
 
 	newDb, err := New(Options{
-		DBDir: "/tmp/pikv/new",
+		DBDir: path.Join(tmpDbDir, "new"),
 	})
 	assert.NoError(t, err)
 	_, err = f.Seek(0, io.SeekStart)

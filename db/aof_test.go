@@ -7,27 +7,30 @@ import (
 	"github.com/joway/pikv/util"
 	"github.com/stretchr/testify/assert"
 	"os"
+	"path"
 	"testing"
 	"time"
 )
 
+var tmpAofDir = "/tmp/pikv/aof"
+
 func setupAOFBus() {
-	_ = os.RemoveAll("/tmp/pikv")
-	_ = os.MkdirAll("/tmp/pikv", os.ModePerm)
+	_ = os.RemoveAll(tmpAofDir)
+	_ = os.MkdirAll(tmpAofDir, os.ModePerm)
 }
 
 func TestAOFBus(t *testing.T) {
 	setupAOFBus()
 
-	bus, err := NewAOFBus("/tmp/pikv/test.aof", UIDSize)
+	bus, err := NewAOFBus(path.Join(tmpAofDir, "test.aof"), UIDSize)
 	assert.NoError(t, err)
 	var offset []byte
 	for i := 0; i < 100; i++ {
 		if i == 50 {
 			offset = NewUID().Bytes()
 		}
-		cmd := util.CommandToArgs(fmt.Sprintf("set k%d xxx", i))
-		err := bus.Append(cmd)
+		args := util.CommandToArgs(fmt.Sprintf("set k%d xxx", i))
+		err := bus.Append(args)
 		assert.NoError(t, err)
 	}
 

@@ -37,7 +37,7 @@ type Database struct {
 
 func New(options Options) (*Database, error) {
 	dataDir := path.Join(options.DBDir, "data")
-	aofFilePath := fmt.Sprintf(options.DBDir, "pikv.aof")
+	aofFilePath := path.Join(options.DBDir, "pikv.aof")
 	if err := os.MkdirAll(dataDir, os.ModePerm); err != nil {
 		return nil, err
 	}

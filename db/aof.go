@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -46,10 +48,10 @@ func (b AOFBus) DecodeLine(line []byte) (offset []byte, args [][]byte) {
 	return offset, args
 }
 
-func (b *AOFBus) Append(cmd [][]byte) error {
+func (b *AOFBus) Append(args [][]byte) error {
 	uid := NewUID()
-	line := b.EncodeLine(uid.Bytes(), cmd)
-	if _, err := b.buffer.Write(append(line, '\n')); err != nil {
+	line := append(b.EncodeLine(uid.Bytes(), args), '\n')
+	if _, err := b.buffer.Write(line); err != nil {
 		return err
 	}
 
@@ -85,6 +87,9 @@ func (b *AOFBus) Sync(ctx context.Context, writer io.Writer, offset []byte) erro
 			}
 			if err != nil {
 				return err
+			}
+			if len(line) < b.offsetSize {
+				return errors.New(fmt.Sprintf("Invalid aof format: %b", line))
 			}
 			timestamp := line[:b.offsetSize]
 			if offset != nil && bytes.Compare(timestamp, offset) < 0 {
