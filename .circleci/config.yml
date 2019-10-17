@@ -8,13 +8,13 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v1-pkg-cache
+            - v1-cache-{{ checksum "go.sum" }}
       - run: sudo apt update && sudo apt install -y gcc
       - run: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.21.0
       - run: mkdir -p /tmp/pikv
       - run: env GO111MODULE=on make
       - save_cache:
-          key: v1-pkg-cache
+          key: v1-cache-{{ checksum "go.sum" }}
           paths:
             - "vendor"
       - run: env GO111MODULE=on make fmt-check
