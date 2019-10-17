@@ -34,8 +34,7 @@ func TestAOFBus(t *testing.T) {
 	stream := util.NewStreamBus()
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 	go func() {
-		if err := bus.Sync(ctx, stream, offset);
-			err != nil {
+		if err := bus.Sync(ctx, stream, offset); err != nil {
 			assert.NoError(t, err)
 		}
 	}()
