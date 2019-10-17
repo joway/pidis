@@ -34,8 +34,7 @@ docker run \
 ### From go get
 
 ```bash
-$ go get -u github.com/joway/pikv
-
+$ go get -u github.com/joway/pikv/...
 
 # check version
 $ pikv -v
