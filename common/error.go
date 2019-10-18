@@ -16,4 +16,6 @@ var (
 	ErrSyntaxError         = errors.New("ERR syntax error")
 	ErrRuntimeError        = errors.New("ERR runtime error")
 	ErrInvalidNumberOfArgs = errors.New("ERR invalid number of arguments")
+
+	ErrKeyNotFound = errors.New("ERR key not found")
 )

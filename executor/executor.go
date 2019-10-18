@@ -17,11 +17,12 @@ var (
 	SLAVEOF  = "SLAVEOF"
 
 	//kv
-	GET = "GET"
-	SET = "SET"
-	DEL = "DEL"
+	GET  = "GET"
+	SET  = "SET"
+	DEL  = "DEL"
+	KEYS = "KEYS"
 
-	logger = loki.New("executor")
+	logger = loki.New("pikv:executor")
 )
 
 const (
@@ -34,7 +35,7 @@ func New(cmd string) Executor {
 	switch strings.ToUpper(cmd) {
 	case QUIT, SHUTDOWN, PING, ECHO, SLAVEOF:
 		return SystemExecutor{BaseExecutor{cmd: cmd, kind: TypeSystem}}
-	case GET:
+	case GET, KEYS:
 		return KVExecutor{BaseExecutor{cmd: cmd, kind: TypeRead}}
 	case SET, DEL:
 		return KVExecutor{BaseExecutor{cmd: cmd, kind: TypeWrite}}

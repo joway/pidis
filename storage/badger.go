@@ -3,7 +3,11 @@ package storage
 import (
 	"context"
 	"github.com/dgraph-io/badger"
+	"github.com/gobwas/glob"
+	"github.com/joway/pikv/common"
 	"io"
+	"regexp"
+	"runtime"
 	"time"
 )
 
@@ -30,22 +34,19 @@ func (storage *BadgerStorage) Get(key []byte) ([]byte, error) {
 	var output []byte = nil
 	err := storage.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(key)
-		if err == badger.ErrKeyNotFound {
-			return nil
-		}
 		if err != nil {
 			return err
 		}
-
 		val, err := item.ValueCopy(nil)
 		if err != nil {
 			return err
 		}
-
 		output = val
-
 		return nil
 	})
+	if err == badger.ErrKeyNotFound {
+		return nil, common.ErrKeyNotFound
+	}
 
 	return output, err
 }
@@ -71,6 +72,70 @@ func (storage *BadgerStorage) Del(keys [][]byte) error {
 
 		return nil
 	})
+}
+
+func (storage *BadgerStorage) Scan(scanOpts common.ScanOptions) ([]common.KVPair, error) {
+	var output []common.KVPair
+	err := storage.db.View(func(txn *badger.Txn) error {
+		//TODO: tuning prefetchSize
+		opts := badger.IteratorOptions{
+			PrefetchValues: scanOpts.IncludeValue,
+			PrefetchSize:   runtime.GOMAXPROCS(0),
+			Reverse:        false,
+			AllVersions:    false,
+		}
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		//check is prefix search
+		var prefix []byte
+		rePrefix := regexp.MustCompile(`^[\w]+\*$`)
+		if rePrefix.MatchString(scanOpts.Pattern) {
+			prefix = []byte(scanOpts.Pattern[:len(scanOpts.Pattern)-1])
+		}
+		globKey, err := glob.Compile(scanOpts.Pattern)
+		if err != nil {
+			return err
+		}
+
+		start := func(it *badger.Iterator) {
+			if prefix == nil {
+				it.Rewind()
+			} else {
+				it.Seek(prefix)
+			}
+		}
+		valid := func(it *badger.Iterator) bool {
+			//hit prefix optimization
+			if prefix != nil {
+				return it.ValidForPrefix(prefix)
+			}
+
+			return it.Valid()
+		}
+		for start(it); valid(it); it.Next() {
+			if scanOpts.Limit > 0 && len(output) >= scanOpts.Limit {
+				return nil
+			}
+			if scanOpts.Pattern != "" && !globKey.Match(string(it.Item().Key())) {
+				continue
+			}
+
+			var pair = common.KVPair{}
+			item := it.Item()
+			pair.SetKey(item.KeyCopy(nil))
+			if scanOpts.IncludeValue {
+				v, err := item.ValueCopy(nil)
+				if err != nil {
+					return err
+				}
+				pair.SetVal(v)
+			}
+			output = append(output, pair)
+		}
+		return nil
+	})
+	return output, err
 }
 
 func (storage *BadgerStorage) Snapshot(ctx context.Context, writer io.Writer) error {

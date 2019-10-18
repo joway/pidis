@@ -8,6 +8,9 @@ VERSION := v$(shell cat VERSION.go | grep -o -e '[0-9].[0-9].[0-9]')
 .PHONY: all
 all: install build
 
+.PHONY: pre-commit
+pre-commit: protoc fmt
+
 .PHONY: install
 install:
 	@echo ">> install dependence"
@@ -27,7 +30,7 @@ release:
 .PHONY: test
 test:
 	@echo ">> run test"
-	@go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
+	@go test -p 1 -race -coverprofile=coverage.txt -covermode=atomic -v ./...
 
 .PHONY: fmt
 fmt:

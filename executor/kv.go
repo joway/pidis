@@ -18,6 +18,8 @@ func (e KVExecutor) Exec(db common.Database, args [][]byte) ([]byte, error) {
 		return e.Del(db, args)
 	case SET:
 		return e.Set(db, args)
+	case KEYS:
+		return e.Keys(db, args)
 	default:
 		return nil, common.ErrUnknownCommand
 	}
@@ -29,8 +31,11 @@ func (KVExecutor) Get(db common.Database, args [][]byte) ([]byte, error) {
 	}
 	key := args[1]
 	val, err := db.Get(key)
-	if err != nil {
+	if err == common.ErrKeyNotFound {
 		return util.MessageNull(), nil
+	}
+	if err != nil {
+		return util.MessageError(err.Error()), nil
 	}
 	return util.Message(val), nil
 }
@@ -70,4 +75,20 @@ func (e KVExecutor) Del(db common.Database, args [][]byte) ([]byte, error) {
 	}
 
 	return util.MessageInt(int64(len(args) - 1)), nil
+}
+
+func (e KVExecutor) Keys(db common.Database, args [][]byte) ([]byte, error) {
+	if len(args) < 2 {
+		return nil, common.ErrInvalidNumberOfArgs
+	}
+	pattern := args[1]
+	pairs, err := db.Scan(common.ScanOptions{Pattern: string(pattern)})
+	if err != nil {
+		return nil, err
+	}
+	var keys [][]byte
+	for _, p := range pairs {
+		keys = append(keys, p.Key)
+	}
+	return util.MessageArray(keys), nil
 }

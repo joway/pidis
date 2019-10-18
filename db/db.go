@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-var logger = loki.New("db")
+var logger = loki.New("pikv:db")
 
 type Options struct {
 	DBDir string
@@ -84,6 +84,10 @@ func (db *Database) Set(key, val []byte, ttl int64) error {
 }
 func (db *Database) Del(keys [][]byte) error {
 	return db.storage.Del(keys)
+}
+
+func (db *Database) Scan(scanOpts common.ScanOptions) ([]common.KVPair, error) {
+	return db.storage.Scan(scanOpts)
 }
 
 func (db *Database) IsWritable() bool {

@@ -28,7 +28,7 @@ docker run \
   -p 6381:6381 \
   -v /tmp/pikv:/data \
   joway/pikv:latest \
-  pikv -p 6380 --rpcPort 6381 --dataDir /data
+  pikv -p 6380 --rpcPort 6381 -d /data
 ```
 
 ### From go get
@@ -40,7 +40,7 @@ $ go get -u github.com/joway/pikv/...
 $ pikv -v
 
 # run pikv server
-$ pikv -p 6380 --dataDir /data
+$ pikv -p 6380 -d /data
 
 # connect pikv server
 $ redis-cli -p 6380

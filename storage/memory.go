@@ -1,41 +1,98 @@
 package storage
 
 import (
-	"github.com/patrickmn/go-cache"
+	"github.com/gobwas/glob"
+	"github.com/joway/pikv/common"
+	"github.com/tidwall/buntdb"
 	"time"
 )
 
 type MemoryStorage struct {
 	Storage
 
-	db *cache.Cache
+	db *buntdb.DB
 }
 
 func NewMemoryStorage(options Options) (Storage, error) {
-	db := cache.New(cache.NoExpiration, 1*time.Millisecond)
-	return &MemoryStorage{db: db}, nil
+	db, err := buntdb.Open(":memory:")
+	return &MemoryStorage{db: db}, err
 }
 
 func (storage *MemoryStorage) Close() error {
-	return nil
+	return storage.db.Close()
 }
 
 func (storage *MemoryStorage) Get(key []byte) ([]byte, error) {
-	val, ok := storage.db.Get(string(key))
-	if !ok {
-		return nil, nil
-	}
-	return val.([]byte), nil
+	var output []byte
+	err := storage.db.View(func(tx *buntdb.Tx) error {
+		val, err := tx.Get(string(key))
+		if err == buntdb.ErrNotFound {
+			return common.ErrKeyNotFound
+		}
+		output = []byte(val)
+		return err
+	})
+	return output, err
 }
 
 func (storage *MemoryStorage) Set(key, val []byte, ttl int64) error {
-	storage.db.Set(string(key), val, time.Duration(ttl)*time.Millisecond)
-	return nil
+	var opts *buntdb.SetOptions
+	if ttl == 0 {
+		opts = nil
+	} else {
+		opts = &buntdb.SetOptions{
+			Expires: true,
+			TTL:     time.Millisecond * time.Duration(ttl),
+		}
+	}
+	err := storage.db.Update(func(tx *buntdb.Tx) error {
+		_, _, err := tx.Set(string(key), string(val), opts)
+		return err
+	})
+	return err
 }
 
 func (storage *MemoryStorage) Del(keys [][]byte) error {
 	for _, key := range keys {
-		storage.db.Delete(string(key))
+		err := storage.db.Update(func(tx *buntdb.Tx) error {
+			_, err := tx.Delete(string(key))
+			return err
+		})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func (storage *MemoryStorage) Scan(scanOpts common.ScanOptions) ([]common.KVPair, error) {
+	var output []common.KVPair
+	reGlob, err := glob.Compile(scanOpts.Pattern)
+	if err != nil {
+		return nil, err
+	}
+	err = storage.db.View(func(tx *buntdb.Tx) error {
+		err := tx.Ascend("", func(key, value string) bool {
+			if scanOpts.Limit > 0 && len(output) >= scanOpts.Limit {
+				return false
+			}
+			if scanOpts.Pattern != "" {
+				//skip
+				if !reGlob.Match(key) {
+					return true
+				}
+			}
+
+			pair := common.KVPair{}
+			pair.SetKey([]byte(key))
+			if scanOpts.IncludeValue {
+				pair.SetVal([]byte(value))
+			}
+			output = append(output, pair)
+			return true
+		})
+		return err
+	})
+
+	return output, err
 }

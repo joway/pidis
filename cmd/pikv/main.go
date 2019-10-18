@@ -4,17 +4,13 @@ import (
 	"fmt"
 	"github.com/joway/loki"
 	"github.com/joway/pikv"
-	"github.com/joway/pikv/common"
 	"github.com/joway/pikv/db"
-	"github.com/joway/pikv/rpc"
-	"github.com/joway/pikv/util"
-	"github.com/tidwall/redcon"
 	"github.com/urfave/cli"
-	"net"
 	"os"
+	"os/signal"
 )
 
-var logger = loki.New("main")
+var logger = loki.New("pikv:main")
 
 type Config struct {
 	port    string
@@ -54,7 +50,7 @@ func main() {
 			dir:     dir,
 		}
 
-		return setup(cfg)
+		return startServer(cfg)
 	}
 
 	if err := app.Run(os.Args); err != nil {
@@ -62,7 +58,7 @@ func main() {
 	}
 }
 
-func setup(cfg Config) error {
+func startServer(cfg Config) error {
 	database, err := db.New(db.Options{
 		DBDir: cfg.dir,
 	})
@@ -78,67 +74,20 @@ func setup(cfg Config) error {
 	externalAddress := fmt.Sprintf(":%s", cfg.port)
 	rpcAddress := fmt.Sprintf(":%s", cfg.rpcPort)
 
-	go func() {
-		if err := rpcServer(database, rpcAddress); err != nil {
-			logger.Fatal("%v", err)
-		}
-	}()
-
-	return redisServer(database, externalAddress)
-}
-
-func redisServer(database *db.Database, address string) error {
-	if err := redcon.ListenAndServe(
-		address,
-		func(conn redcon.Conn, cmd redcon.Command) {
-			defer func() {
-				if err := recover(); err != nil {
-					conn.WriteError(fmt.Sprintf("fatal error: %s", (err.(error)).Error()))
-				}
-			}()
-			out, err := database.Exec(cmd.Args)
-			switch err {
-			case nil:
-				conn.WriteRaw(out)
-			case common.ErrUnknownCommand:
-				conn.WriteRaw(util.MessageError(fmt.Sprintf(
-					"ERR unknown command '%s'",
-					cmd.Args[0],
-				)))
-			case common.ErrUnknown:
-				conn.WriteRaw(util.MessageError(common.ErrUnknown.Error()))
-			case common.ErrRuntimeError:
-				conn.WriteRaw(util.MessageError(common.ErrRuntimeError.Error()))
-			case common.ErrInvalidNumberOfArgs:
-				conn.WriteRaw(util.MessageError(common.ErrInvalidNumberOfArgs.Error()))
-			case common.ErrSyntaxError:
-				conn.WriteRaw(util.MessageError(common.ErrSyntaxError.Error()))
-			case common.ErrCloseConn:
-				if err := conn.Close(); err != nil {
-					logger.Error("connection close Failed:\n%v", err)
-				}
-			case common.ErrShutdown:
-				logger.Fatal("shutting server down, bye bye")
-			default:
-				logger.Error("Unhandled error : %v", err)
-			}
-		},
-		nil,
-		nil,
-	); err != nil {
-		return err
-	}
-	return nil
-}
-
-func rpcServer(database *db.Database, address string) error {
-	listen, err := net.Listen("tcp", address)
+	rpcServer, err := db.ListenRpcServer(database, rpcAddress)
 	if err != nil {
-		return err
+		logger.Fatal("%v", err)
 	}
-	server := rpc.NewRpcServer(database)
-	if err := server.Serve(listen); err != nil {
-		return err
+	redisServer := db.ListenRedisProtoServer(database, externalAddress)
+
+	stop := make(chan os.Signal)
+	signal.Notify(stop, os.Interrupt)
+	select {
+	case <-stop:
+		rpcServer.Stop()
+		if err := redisServer.Close(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

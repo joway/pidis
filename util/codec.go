@@ -25,3 +25,11 @@ func Message(b []byte) []byte {
 func MessageString(s string) []byte {
 	return redcon.AppendString(nil, s)
 }
+
+func MessageArray(array [][]byte) []byte {
+	out := redcon.AppendArray(nil, len(array))
+	for _, item := range array {
+		out = redcon.AppendBulk(out, item)
+	}
+	return out
+}

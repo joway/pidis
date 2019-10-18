@@ -8,7 +8,7 @@ import (
 	"github.com/joway/pikv/util"
 )
 
-var logger = loki.New("rpc:client")
+var logger = loki.New("pikv:rpc:client")
 
 type PiKVService struct {
 	proto.UnimplementedPiKVServer
