@@ -3,9 +3,10 @@ package types
 import "errors"
 
 var (
-	ErrUnknownCommand = errors.New("ERR unknown command")
-	ErrNodeReadOnly   = errors.New("ERR node read only")
-	ErrNodeIsMaster   = errors.New("ERR node is master")
+	ErrUnknownCommand    = errors.New("ERR unknown command")
+	ErrNodeReadOnly      = errors.New("ERR node read only")
+	ErrNodeIsMaster      = errors.New("ERR node is master")
+	ErrNodeConnectFailed = errors.New("ERR node connect failed")
 
 	ErrInvalidAOFFormat = errors.New("ERR invalid aof format")
 

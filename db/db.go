@@ -14,6 +14,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 )
 
 var logger = loki.New("pikv:db")
@@ -149,7 +150,7 @@ func (db *Database) Daemon() error {
 
 					fCtx, fCancel = context.WithCancel(ctx)
 					if err := db.Following(fCtx); err != nil {
-						logger.Fatal("%v", err)
+						logger.Error("failed to following: %v", err)
 					}
 				}()
 			} else {
@@ -163,9 +164,15 @@ func (db *Database) Daemon() error {
 func (db *Database) SlaveOf(host, port string) error {
 	address := fmt.Sprintf("%s:%s", host, port)
 	var err error
-	db.followingConn, err = grpc.Dial(address, grpc.WithInsecure())
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*1)
+	db.followingConn, err = grpc.DialContext(
+		ctx,
+		address,
+		grpc.WithInsecure(),
+		grpc.WithBlock(),
+	)
 	if err != nil {
-		return err
+		return types.ErrNodeConnectFailed
 	}
 	db.following = &Node{
 		host: host,
