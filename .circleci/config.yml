@@ -2,7 +2,7 @@ version: 2
 jobs:
   unittest:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.13
       - image: redis
     working_directory: /go/src/github.com/joway/pikv
     steps:
@@ -24,7 +24,7 @@ jobs:
       - run: bash <(curl -s https://codecov.io/bash)
   install:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.13
     steps:
       - run: mkdir -p ~/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
       - run: go get github.com/joway/pikv/...
