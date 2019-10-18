@@ -28,7 +28,7 @@ docker run \
   -p 6381:6381 \
   -v /tmp/pikv:/data \
   joway/pikv:latest \
-  pikv -p 6380 --rpcPort 6381 -d /data
+  -p 6380 --rpcPort 6381 -d /data
 ```
 
 ### From go get
