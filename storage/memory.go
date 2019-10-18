@@ -2,7 +2,7 @@ package storage
 
 import (
 	"github.com/gobwas/glob"
-	"github.com/joway/pikv/common"
+	"github.com/joway/pikv/types"
 	"github.com/tidwall/buntdb"
 	"time"
 )
@@ -27,7 +27,7 @@ func (storage *MemoryStorage) Get(key []byte) ([]byte, error) {
 	err := storage.db.View(func(tx *buntdb.Tx) error {
 		val, err := tx.Get(string(key))
 		if err == buntdb.ErrNotFound {
-			return common.ErrKeyNotFound
+			return types.ErrKeyNotFound
 		}
 		output = []byte(val)
 		return err
@@ -65,8 +65,8 @@ func (storage *MemoryStorage) Del(keys [][]byte) error {
 	return nil
 }
 
-func (storage *MemoryStorage) Scan(scanOpts common.ScanOptions) ([]common.KVPair, error) {
-	var output []common.KVPair
+func (storage *MemoryStorage) Scan(scanOpts ScanOptions) ([]KVPair, error) {
+	var output []KVPair
 	reGlob, err := glob.Compile(scanOpts.Pattern)
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func (storage *MemoryStorage) Scan(scanOpts common.ScanOptions) ([]common.KVPair
 				}
 			}
 
-			pair := common.KVPair{}
+			pair := KVPair{}
 			pair.SetKey([]byte(key))
 			if scanOpts.IncludeValue {
 				pair.SetVal([]byte(value))

@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"github.com/joway/pikv/common"
 	"io"
 )
 
@@ -10,7 +9,7 @@ type Storage interface {
 	Get(key []byte) ([]byte, error)
 	Set(key, val []byte, ttl int64) error
 	Del(keys [][]byte) error
-	Scan(scanOpts common.ScanOptions) ([]common.KVPair, error)
+	Scan(scanOpts ScanOptions) ([]KVPair, error)
 	Close() error
 
 	Snapshot(ctx context.Context, writer io.Writer) error
@@ -36,4 +35,22 @@ func NewStorage(options Options) (Storage, error) {
 	case TypeMemory:
 		return NewMemoryStorage(options)
 	}
+}
+
+type ScanOptions struct {
+	Pattern      string
+	Limit        int
+	IncludeValue bool
+}
+
+type KVPair struct {
+	Key, Val []byte
+}
+
+func (p *KVPair) SetKey(key []byte) {
+	p.Key = key
+}
+
+func (p *KVPair) SetVal(val []byte) {
+	p.Val = val
 }

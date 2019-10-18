@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"github.com/joway/pikv/common"
+	"github.com/joway/pikv/types"
 	"github.com/tidwall/redcon"
 	"io"
 	"os"
@@ -34,7 +34,7 @@ func EncodeAOF(uid []byte, args [][]byte) []byte {
 func DecodeAOF(content []byte) (uid []byte, args [][]byte, leftover []byte, err error) {
 	isCompleted, args, _, leftover, err := redcon.ReadNextCommand(content, nil)
 	if err != nil {
-		return nil, nil, content, common.ErrInvalidAOFFormat
+		return nil, nil, content, types.ErrInvalidAOFFormat
 	}
 	if !isCompleted {
 		return nil, nil, content, nil

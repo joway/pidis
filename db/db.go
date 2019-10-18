@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/joway/loki"
-	"github.com/joway/pikv/common"
 	"github.com/joway/pikv/executor"
-	"github.com/joway/pikv/rpc/proto"
+	"github.com/joway/pikv/proto"
 	"github.com/joway/pikv/storage"
+	"github.com/joway/pikv/types"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"io"
@@ -76,20 +76,6 @@ func (db *Database) Run() {
 	}()
 }
 
-func (db *Database) Get(key []byte) ([]byte, error) {
-	return db.storage.Get(key)
-}
-func (db *Database) Set(key, val []byte, ttl int64) error {
-	return db.storage.Set(key, val, ttl)
-}
-func (db *Database) Del(keys [][]byte) error {
-	return db.storage.Del(keys)
-}
-
-func (db *Database) Scan(scanOpts common.ScanOptions) ([]common.KVPair, error) {
-	return db.storage.Scan(scanOpts)
-}
-
 func (db *Database) IsWritable() bool {
 	return db.following == nil
 }
@@ -118,30 +104,29 @@ func (db *Database) Close() error {
 	return errors.Errorf("%v", errs)
 }
 
-func (db *Database) exec(args [][]byte, isInternal bool) (output []byte, err error) {
+func (db *Database) exec(args [][]byte, isInternal bool) (result *executor.Result, err error) {
 	if len(args) == 0 {
-		return nil, common.ErrInvalidNumberOfArgs
+		return nil, types.ErrInvalidNumberOfArgs
 	}
 	cmd := strings.ToUpper(string(args[0]))
 	exec := executor.New(cmd)
 	if exec.IsWrite() {
 		if !isInternal && !db.IsWritable() {
-			return nil, common.ErrNodeReadOnly
+			return nil, types.ErrNodeReadOnly
 		}
 		if err := db.Record(args); err != nil {
 			return nil, err
 		}
 	}
 
-	output, err = exec.Exec(db, args)
-	return output, err
+	return exec.Exec(db.storage, args)
 }
 
-func (db *Database) Exec(args [][]byte) (output []byte, err error) {
+func (db *Database) Exec(args [][]byte) (result *executor.Result, err error) {
 	return db.exec(args, false)
 }
 
-func (db *Database) IExec(args [][]byte) (output []byte, err error) {
+func (db *Database) IExec(args [][]byte) (result *executor.Result, err error) {
 	return db.exec(args, true)
 }
 
@@ -192,7 +177,7 @@ func (db *Database) SlaveOf(host, port string) error {
 
 func (db *Database) Following(ctx context.Context) error {
 	if db.following == nil {
-		return common.ErrNodeIsMaster
+		return types.ErrNodeIsMaster
 	}
 
 	client := proto.NewPiKVClient(db.followingConn)
@@ -231,7 +216,7 @@ restore:
 	{
 		//restore snapshot
 		_, _ = snapFile.Seek(0, io.SeekStart)
-		if err := db.LoadSnapshot(ctx, snapFile); err != nil {
+		if err := db.storage.LoadSnapshot(ctx, snapFile); err != nil {
 			return errors.Wrap(err, "load snapshot failed")
 		}
 	}
@@ -273,15 +258,4 @@ restore:
 
 func (db *Database) Sync(ctx context.Context, writer io.Writer, offset []byte) error {
 	return db.aofBus.Sync(ctx, writer, offset)
-}
-
-func (db *Database) Snapshot(ctx context.Context, writer io.Writer) error {
-	if err := db.storage.Snapshot(ctx, writer); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (db *Database) LoadSnapshot(ctx context.Context, reader io.Reader) error {
-	return db.storage.LoadSnapshot(ctx, reader)
 }

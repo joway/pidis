@@ -2,7 +2,7 @@ package storage
 
 import (
 	"fmt"
-	"github.com/joway/pikv/common"
+	"github.com/joway/pikv/types"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -82,13 +82,13 @@ func testStorage(t *testing.T, storage Storage) {
 	}
 
 	v, err := storage.Get([]byte("k100"))
-	assert.Equal(t, common.ErrKeyNotFound, err)
+	assert.Equal(t, types.ErrKeyNotFound, err)
 	assert.Nil(t, v)
 
 	err = storage.Del([][]byte{[]byte("k99")})
 	assert.NoError(t, err)
 	v, err = storage.Get([]byte("k99"))
-	assert.Equal(t, common.ErrKeyNotFound, err)
+	assert.Equal(t, types.ErrKeyNotFound, err)
 	assert.Nil(t, v)
 }
 
@@ -114,25 +114,25 @@ func testStorageScan(t *testing.T, storage Storage) {
 		assert.NoError(t, err)
 	}
 
-	pairs, err := storage.Scan(common.ScanOptions{Limit: 1000, IncludeValue: true})
+	pairs, err := storage.Scan(ScanOptions{Limit: 1000, IncludeValue: true})
 	assert.NoError(t, err)
 	assert.Equal(t, 100, len(pairs))
 	for _, pair := range pairs {
 		assert.NotNil(t, pair.Val)
 	}
 
-	pairs, err = storage.Scan(common.ScanOptions{Limit: 10, IncludeValue: false})
+	pairs, err = storage.Scan(ScanOptions{Limit: 10, IncludeValue: false})
 	assert.NoError(t, err)
 	assert.Equal(t, 10, len(pairs))
 	for _, pair := range pairs {
 		assert.Nil(t, pair.Val)
 	}
 
-	pairs, err = storage.Scan(common.ScanOptions{Limit: -1, IncludeValue: false, Pattern: "k1"})
+	pairs, err = storage.Scan(ScanOptions{Limit: -1, IncludeValue: false, Pattern: "k1"})
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(pairs))
 
-	pairs, err = storage.Scan(common.ScanOptions{Limit: -1, IncludeValue: false, Pattern: "k1*"})
+	pairs, err = storage.Scan(ScanOptions{Limit: -1, IncludeValue: false, Pattern: "k1*"})
 	assert.NoError(t, err)
 	assert.Equal(t, 11, len(pairs))
 }

@@ -1,8 +1,8 @@
 package executor
 
 import (
-	"fmt"
-	"github.com/joway/pikv/common"
+	"github.com/joway/pikv/storage"
+	"github.com/joway/pikv/types"
 	"github.com/joway/pikv/util"
 )
 
@@ -10,49 +10,52 @@ type SystemExecutor struct {
 	BaseExecutor
 }
 
-func (e SystemExecutor) Exec(db common.Database, args [][]byte) ([]byte, error) {
+func (e SystemExecutor) Exec(store storage.Storage, args [][]byte) (*Result, error) {
 	switch e.cmd {
 	case PING:
-		return e.Ping(db, args)
+		return e.Ping(store, args)
 	case ECHO:
-		return e.Echo(db, args)
+		return e.Echo(store, args)
 	case QUIT:
-		return e.Quit(db, args)
+		return e.Quit(store, args)
 	case SHUTDOWN:
-		return e.Shutdown(db, args)
+		return e.Shutdown(store, args)
 	case SLAVEOF:
-		return e.SlaveOf(db, args)
+		return e.SlaveOf(store, args)
 	default:
-		return nil, common.ErrUnknownCommand
+		return nil, types.ErrUnknownCommand
 	}
 }
 
-func (SystemExecutor) Ping(db common.Database, args [][]byte) ([]byte, error) {
-	return util.MessageString("PONG"), nil
+func (SystemExecutor) Ping(store storage.Storage, args [][]byte) (*Result, error) {
+	return &Result{output: util.MessageString("PONG")}, nil
 }
 
-func (SystemExecutor) Echo(db common.Database, args [][]byte) ([]byte, error) {
+func (SystemExecutor) Echo(store storage.Storage, args [][]byte) (*Result, error) {
 	if len(args) == 2 {
-		return util.Message(args[1]), nil
+		return &Result{output: util.Message(args[1])}, nil
 	} else {
-		return nil, common.ErrInvalidNumberOfArgs
+		return nil, types.ErrInvalidNumberOfArgs
 	}
 }
 
-func (SystemExecutor) Quit(db common.Database, args [][]byte) ([]byte, error) {
-	return util.MessageOK(), common.ErrCloseConn
+func (SystemExecutor) Quit(store storage.Storage, args [][]byte) (*Result, error) {
+	return &Result{
+		output: util.MessageOK(),
+		action: ActionConnClose,
+	}, nil
 }
 
-func (SystemExecutor) Shutdown(db common.Database, args [][]byte) ([]byte, error) {
-	return util.MessageOK(), common.ErrShutdown
+func (SystemExecutor) Shutdown(store storage.Storage, args [][]byte) (*Result, error) {
+	return &Result{
+		output: util.MessageOK(),
+		action: ActionShutdown,
+	}, nil
 }
 
-func (e SystemExecutor) SlaveOf(db common.Database, args [][]byte) ([]byte, error) {
-	host := string(args[1])
-	port := string(args[2])
-	if err := db.SlaveOf(host, port); err != nil {
-		logger.Error("%v", err)
-		return util.MessageError(fmt.Sprintf("%s Failed", e.cmd)), nil
+func (e SystemExecutor) SlaveOf(store storage.Storage, args [][]byte) (*Result, error) {
+	if len(args) != 3 {
+		return nil, types.ErrInvalidNumberOfArgs
 	}
-	return util.MessageOK(), nil
+	return &Result{output: util.MessageOK(), action: ActionSlaveOf}, nil
 }
