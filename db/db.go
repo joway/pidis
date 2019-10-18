@@ -99,9 +99,12 @@ func (db *Database) Record(cmd [][]byte) error {
 }
 
 func (db *Database) Close() error {
+	//TODO: improve error handle
 	var errs []error
-	if err := db.followingConn.Close(); err != nil {
-		errs = append(errs, err)
+	if db.followingConn != nil {
+		if err := db.followingConn.Close(); err != nil {
+			errs = append(errs, err)
+		}
 	}
 	if err := db.aofBus.Flush(); err != nil {
 		errs = append(errs, err)
