@@ -251,13 +251,19 @@ restore:
 			line := resp.GetPayload()
 			//TODO: concurrent
 			//replay oplog
-			_, args, _, err := DecodeAOF(line)
-			if err != nil {
-				return errors.Wrap(err, "parse oplog failed")
-			}
-			_, err = db.IExec(args)
-			if err != nil {
-				return errors.Wrap(err, "replay oplog failed")
+			for {
+				_, args, leftover, err := DecodeAOF(line)
+				if err != nil {
+					return errors.Wrap(err, "parse oplog failed")
+				}
+				_, err = db.IExec(args)
+				if err != nil {
+					return errors.Wrap(err, "replay oplog failed")
+				}
+				if len(leftover) == 0 {
+					break
+				}
+				line = leftover
 			}
 		}
 	}

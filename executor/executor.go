@@ -43,7 +43,6 @@ func New(cmd string) Executor {
 }
 
 type Executor interface {
-	Type() int
 	IsWrite() bool
 	Exec(store storage.Storage, args [][]byte) (*Result, error)
 }

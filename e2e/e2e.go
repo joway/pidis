@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"fmt"
 	"github.com/go-redis/redis/v7"
 	"github.com/joway/pikv/db"
 	"github.com/joway/pikv/util"
@@ -31,7 +30,6 @@ func setup(t *testing.T) {
 	//delete all keys
 	cli := getRedisClient(t)
 	keys, err := cli.Keys("*").Result()
-	fmt.Println("keys", keys)
 	assert.NoError(t, err)
 	cli.Del(keys...)
 }

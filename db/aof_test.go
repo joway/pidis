@@ -6,41 +6,45 @@ import (
 	"fmt"
 	"github.com/joway/pikv/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 	"os"
 	"path"
 	"testing"
 	"time"
 )
 
-var tmpAofDir = "/tmp/pikv/aof"
+type AOFTestSuite struct {
+	suite.Suite
 
-func setupAOFBus() {
-	_ = os.RemoveAll(tmpAofDir)
-	_ = os.MkdirAll(tmpAofDir, os.ModePerm)
+	dir string
 }
 
-func TestDecode(t *testing.T) {
+func (suite *AOFTestSuite) SetupTest() {
+	suite.dir = "/tmp/pikv/aof"
+	_ = os.RemoveAll(suite.dir)
+	_ = os.MkdirAll(suite.dir, os.ModePerm)
+}
+
+func (suite *AOFTestSuite) TestDecode() {
 	text := []byte("*4\r\n$12\r\n000000000000\r\n$3\r\nset\r\n$1\r\nk\r\n$1\r\nv\r\n" +
 		"*3\r\n$12\r\n000000000000\r\n$3\r\nget\r\n$1\r\nk\r\n")
 	uid, args, leftover, err := DecodeAOF(text)
-	assert.NoError(t, err)
-	assert.Equal(t, "000000000000", string(uid))
-	assert.Equal(t, "*3\r\n$12\r\n000000000000\r\n$3\r\nget\r\n$1\r\nk\r\n", string(leftover))
-	assert.Equal(t, "set k v", string(bytes.Join(args, []byte(" "))))
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "000000000000", string(uid))
+	assert.Equal(suite.T(), "*3\r\n$12\r\n000000000000\r\n$3\r\nget\r\n$1\r\nk\r\n", string(leftover))
+	assert.Equal(suite.T(), "set k v", string(bytes.Join(args, []byte(" "))))
 }
 
-func TestEncode(t *testing.T) {
+func (suite *AOFTestSuite) TestEncode() {
 	uid := NewUID().Bytes()
 	args := [][]byte{[]byte("set"), []byte("k"), []byte("v")}
 	encoded := EncodeAOF(uid, args)
-	assert.Equal(t, fmt.Sprintf("*4\r\n$12\r\n%s\r\n$3\r\nset\r\n$1\r\nk\r\n$1\r\nv\r\n", uid), string(encoded))
+	assert.Equal(suite.T(), fmt.Sprintf("*4\r\n$12\r\n%s\r\n$3\r\nset\r\n$1\r\nk\r\n$1\r\nv\r\n", uid), string(encoded))
 }
 
-func TestAOFBus(t *testing.T) {
-	setupAOFBus()
-
-	bus, err := NewAOFBus(path.Join(tmpAofDir, "test.aof"), UIDSize)
-	assert.NoError(t, err)
+func (suite *AOFTestSuite) TestSync() {
+	bus, err := NewAOFBus(path.Join(suite.dir, "test.aof"), UIDSize)
+	assert.NoError(suite.T(), err)
 	var offset []byte
 	for i := 0; i < 100; i++ {
 		if i == 50 {
@@ -48,7 +52,7 @@ func TestAOFBus(t *testing.T) {
 		}
 		args := util.CommandToArgs(fmt.Sprintf("set k%d xxx", i))
 		err := bus.Append(args)
-		assert.NoError(t, err)
+		assert.NoError(suite.T(), err)
 	}
 
 	stream := util.NewStreamBus()
@@ -59,7 +63,7 @@ func TestAOFBus(t *testing.T) {
 			return
 		default:
 			if err := bus.Sync(ctx, stream, offset); err != nil {
-				assert.NoError(t, err)
+				assert.NoError(suite.T(), err)
 			}
 		}
 	}()
@@ -68,20 +72,24 @@ func TestAOFBus(t *testing.T) {
 	for {
 		select {
 		case <-ctx.Done():
-			assert.Equal(t, 99, total)
+			assert.Equal(suite.T(), 99, total)
 			return
 		case content := <-stream.Read():
 			for {
 				ts, args, leftover, err := DecodeAOF(content)
-				assert.NoError(t, err)
+				assert.NoError(suite.T(), err)
 				if ts == nil && args == nil {
 					break
 				}
 				total += 1
-				assert.True(t, bytes.Compare(offset, ts) <= 0)
-				assert.Equal(t, string(args[1]), fmt.Sprintf("k%d", total))
+				assert.True(suite.T(), bytes.Compare(offset, ts) <= 0)
+				assert.Equal(suite.T(), string(args[1]), fmt.Sprintf("k%d", total))
 				content = leftover
 			}
 		}
 	}
+}
+
+func TestAOF(t *testing.T) {
+	suite.Run(t, new(AOFTestSuite))
 }
