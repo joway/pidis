@@ -9,21 +9,14 @@
 
 A redis protocol compatible key-value store. It's built on top of [Badger](https://github.com/dgraph-io/badger).
 
-## TODO
-
-- [x] Master-Slave Architecture
-- [ ] Config with toml file
-- [ ] Benchmark between redis,ledisdb,pikv
-- [ ] Slave of with key prefix
-- [ ] ~100% test coverage
-
 ## Get Start
 
 ### From docker
 
 ```bash
 docker run \
-  --name=pikv
+  --rm \
+  --name=pikv \
   -p 6380:6380 \
   -p 6381:6381 \
   -v /tmp/pikv:/data \
