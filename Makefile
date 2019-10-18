@@ -32,6 +32,11 @@ test:
 	@echo ">> run test"
 	@go test -p 1 -race -coverprofile=coverage.txt -covermode=atomic -v ./...
 
+.PHONY: e2e
+e2e:
+	@echo ">> run e2e test"
+	@go test -p 1 -race -coverprofile=coverage.txt -covermode=atomic -v ./e2e/...
+
 .PHONY: fmt
 fmt:
 	@echo ">> formatting code"
