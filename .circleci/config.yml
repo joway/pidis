@@ -77,6 +77,7 @@ workflows:
             tags:
               only: /.*/
       - publish-latest:
+          context: docker
           filters:
             tags:
               only: /.*/
