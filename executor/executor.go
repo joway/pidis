@@ -2,11 +2,9 @@ package executor
 
 import (
 	"github.com/joway/loki"
-	"github.com/joway/pikv/common"
+	"github.com/joway/pikv/storage"
 	"strings"
 )
-
-type Action int
 
 var (
 	//system
@@ -21,8 +19,6 @@ var (
 	SET  = "SET"
 	DEL  = "DEL"
 	KEYS = "KEYS"
-
-	logger = loki.New("pikv:executor")
 )
 
 const (
@@ -30,6 +26,8 @@ const (
 	TypeRead   = 1
 	TypeWrite  = 2
 )
+
+var logger = loki.New("pikv:executor")
 
 func New(cmd string) Executor {
 	switch strings.ToUpper(cmd) {
@@ -47,7 +45,7 @@ func New(cmd string) Executor {
 type Executor interface {
 	Type() int
 	IsWrite() bool
-	Exec(db common.Database, args [][]byte) (output []byte, err error)
+	Exec(store storage.Storage, args [][]byte) (*Result, error)
 }
 
 type BaseExecutor struct {

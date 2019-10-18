@@ -1,7 +1,8 @@
 package executor
 
 import (
-	"github.com/joway/pikv/common"
+	"github.com/joway/pikv/storage"
+	"github.com/joway/pikv/types"
 	"github.com/joway/pikv/util"
 	"strconv"
 )
@@ -10,39 +11,39 @@ type KVExecutor struct {
 	BaseExecutor
 }
 
-func (e KVExecutor) Exec(db common.Database, args [][]byte) ([]byte, error) {
+func (e KVExecutor) Exec(store storage.Storage, args [][]byte) (*Result, error) {
 	switch e.cmd {
 	case GET:
-		return e.Get(db, args)
+		return e.Get(store, args)
 	case DEL:
-		return e.Del(db, args)
+		return e.Del(store, args)
 	case SET:
-		return e.Set(db, args)
+		return e.Set(store, args)
 	case KEYS:
-		return e.Keys(db, args)
+		return e.Keys(store, args)
 	default:
-		return nil, common.ErrUnknownCommand
+		return nil, types.ErrUnknownCommand
 	}
 }
 
-func (KVExecutor) Get(db common.Database, args [][]byte) ([]byte, error) {
+func (KVExecutor) Get(store storage.Storage, args [][]byte) (*Result, error) {
 	if len(args) != 2 {
-		return nil, common.ErrInvalidNumberOfArgs
+		return nil, types.ErrInvalidNumberOfArgs
 	}
 	key := args[1]
-	val, err := db.Get(key)
-	if err == common.ErrKeyNotFound {
-		return util.MessageNull(), nil
+	val, err := store.Get(key)
+	if err == types.ErrKeyNotFound {
+		return &Result{output: util.MessageNull()}, nil
 	}
 	if err != nil {
-		return util.MessageError(err.Error()), nil
+		return &Result{output: util.MessageError(err.Error())}, nil
 	}
-	return util.Message(val), nil
+	return &Result{output: util.Message(val)}, nil
 }
 
-func (e KVExecutor) Set(db common.Database, args [][]byte) ([]byte, error) {
+func (e KVExecutor) Set(store storage.Storage, args [][]byte) (*Result, error) {
 	if !(len(args) >= 3 && len(args) <= 4) {
-		return nil, common.ErrInvalidNumberOfArgs
+		return nil, types.ErrInvalidNumberOfArgs
 	}
 
 	var (
@@ -55,34 +56,34 @@ func (e KVExecutor) Set(db common.Database, args [][]byte) ([]byte, error) {
 	if len(args) == 4 {
 		ttl, err = strconv.ParseInt(string(args[3]), 10, 64)
 		if err != nil {
-			return nil, common.ErrSyntaxError
+			return nil, types.ErrSyntaxError
 		}
 	}
 
-	if err := db.Set(key, val, ttl); err != nil {
+	if err := store.Set(key, val, ttl); err != nil {
 		logger.Error("%v", err)
-		return nil, common.ErrRuntimeError
+		return nil, types.ErrRuntimeError
 	}
-	return util.MessageOK(), nil
+	return &Result{output: util.MessageOK()}, nil
 }
 
-func (e KVExecutor) Del(db common.Database, args [][]byte) ([]byte, error) {
+func (e KVExecutor) Del(store storage.Storage, args [][]byte) (*Result, error) {
 	if len(args) < 2 {
-		return nil, common.ErrInvalidNumberOfArgs
+		return nil, types.ErrInvalidNumberOfArgs
 	}
-	if err := db.Del(args[1:]); err != nil {
-		return nil, common.ErrSyntaxError
+	if err := store.Del(args[1:]); err != nil {
+		return nil, types.ErrSyntaxError
 	}
 
-	return util.MessageInt(int64(len(args) - 1)), nil
+	return &Result{output: util.MessageInt(int64(len(args) - 1))}, nil
 }
 
-func (e KVExecutor) Keys(db common.Database, args [][]byte) ([]byte, error) {
+func (e KVExecutor) Keys(store storage.Storage, args [][]byte) (*Result, error) {
 	if len(args) < 2 {
-		return nil, common.ErrInvalidNumberOfArgs
+		return nil, types.ErrInvalidNumberOfArgs
 	}
 	pattern := args[1]
-	pairs, err := db.Scan(common.ScanOptions{Pattern: string(pattern)})
+	pairs, err := store.Scan(storage.ScanOptions{Pattern: string(pattern)})
 	if err != nil {
 		return nil, err
 	}
@@ -90,5 +91,5 @@ func (e KVExecutor) Keys(db common.Database, args [][]byte) ([]byte, error) {
 	for _, p := range pairs {
 		keys = append(keys, p.Key)
 	}
-	return util.MessageArray(keys), nil
+	return &Result{output: util.MessageArray(keys)}, nil
 }

@@ -19,7 +19,7 @@ install:
 .PHONY: protoc
 protoc:
 	@echo ">> gen protobuf"
-	@protoc --go_out=plugins=grpc:. ./rpc/**/*.proto
+	@protoc --go_out=plugins=grpc:. ./proto/*.proto
 
 .PHONY: release
 release:

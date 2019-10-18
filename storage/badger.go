@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/dgraph-io/badger"
 	"github.com/gobwas/glob"
-	"github.com/joway/pikv/common"
+	"github.com/joway/pikv/types"
 	"io"
 	"regexp"
 	"runtime"
@@ -45,7 +45,7 @@ func (storage *BadgerStorage) Get(key []byte) ([]byte, error) {
 		return nil
 	})
 	if err == badger.ErrKeyNotFound {
-		return nil, common.ErrKeyNotFound
+		return nil, types.ErrKeyNotFound
 	}
 
 	return output, err
@@ -74,8 +74,8 @@ func (storage *BadgerStorage) Del(keys [][]byte) error {
 	})
 }
 
-func (storage *BadgerStorage) Scan(scanOpts common.ScanOptions) ([]common.KVPair, error) {
-	var output []common.KVPair
+func (storage *BadgerStorage) Scan(scanOpts ScanOptions) ([]KVPair, error) {
+	var output []KVPair
 	err := storage.db.View(func(txn *badger.Txn) error {
 		//TODO: tuning prefetchSize
 		opts := badger.IteratorOptions{
@@ -121,7 +121,7 @@ func (storage *BadgerStorage) Scan(scanOpts common.ScanOptions) ([]common.KVPair
 				continue
 			}
 
-			var pair = common.KVPair{}
+			var pair = KVPair{}
 			item := it.Item()
 			pair.SetKey(item.KeyCopy(nil))
 			if scanOpts.IncludeValue {

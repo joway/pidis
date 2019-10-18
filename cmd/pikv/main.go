@@ -66,7 +66,7 @@ func startServer(cfg Config) error {
 		return err
 	}
 	defer func() {
-		logger.Info("Graceful ActionShutdown")
+		logger.Info("graceful shutdown")
 		database.Close()
 	}()
 	database.Run()

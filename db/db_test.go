@@ -3,7 +3,6 @@ package db
 import (
 	"bufio"
 	"context"
-	"github.com/joway/pikv/rpc"
 	"github.com/joway/pikv/util"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -38,16 +37,16 @@ func TestDatabase_SlaveOf(t *testing.T) {
 	leaderListen, err := net.Listen("tcp", ":10001")
 	assert.NoError(t, err)
 	go func() {
-		server := rpc.NewRpcServer(leader)
+		server := NewRpcServer(leader)
 		err := server.Serve(leaderListen)
 		assert.NoError(t, err)
 	}()
 
 	_, err = leader.Exec(util.CommandToArgs("set k x"))
 	assert.NoError(t, err)
-	output, err := leader.Exec(util.CommandToArgs("get k"))
+	result, err := leader.Exec(util.CommandToArgs("get k"))
 	assert.NoError(t, err)
-	assert.Equal(t, output[4], byte('x'))
+	assert.Equal(t, result.Output()[4], byte('x'))
 
 	err = follower.SlaveOf("0.0.0.0", "10001")
 	assert.NoError(t, err)
@@ -61,14 +60,15 @@ func TestDatabase_SlaveOf(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	output, err = follower.Exec(util.CommandToArgs("get k"))
+	result, err = follower.Exec(util.CommandToArgs("get k"))
 	assert.NoError(t, err)
-	assert.Equal(t, byte('x'), output[4])
-	output, err = follower.Exec(util.CommandToArgs("get k1"))
+	assert.Equal(t, byte('x'), result.Output()[4])
+	result, err = follower.Exec(util.CommandToArgs("get k1"))
 	assert.NoError(t, err)
-	assert.Equal(t, "xxx", string(output[4:7]))
-	output, err = follower.Exec(util.CommandToArgs("get k2"))
+	assert.Equal(t, "xxx", string(result.Output()[4:7]))
+	result, err = follower.Exec(util.CommandToArgs("get k2"))
 	assert.NoError(t, err)
+	//assert.Equal(t, "xxx", string(result.Output()[4:7]))
 }
 
 func TestDatabase_Snapshot(t *testing.T) {
@@ -86,7 +86,7 @@ func TestDatabase_Snapshot(t *testing.T) {
 	f, err := os.OpenFile(path.Join(tmpDbDir, "pikv.snap"), os.O_RDWR|os.O_CREATE, os.ModePerm)
 	defer f.Close()
 	writer := bufio.NewWriter(f)
-	err = db.Snapshot(ctx, writer)
+	err = db.storage.Snapshot(ctx, writer)
 	assert.NoError(t, err)
 	err = writer.Flush()
 	assert.NoError(t, err)
@@ -97,8 +97,8 @@ func TestDatabase_Snapshot(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = f.Seek(0, io.SeekStart)
 	assert.NoError(t, err)
-	err = newDb.LoadSnapshot(ctx, f)
+	err = newDb.storage.LoadSnapshot(ctx, f)
 	assert.NoError(t, err)
-	output, err := newDb.Exec(util.CommandToArgs("get a"))
-	assert.Equal(t, output[4], byte('x'))
+	result, err := newDb.Exec(util.CommandToArgs("get a"))
+	assert.Equal(t, result.Output()[4], byte('x'))
 }
