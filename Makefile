@@ -4,6 +4,8 @@ GOFILES := $(shell find . -name "*.go" -type f -not -path "./vendor/*")
 GOFMT ?= gofmt "-s"
 GO_BUILD_TAGS = -a -ldflags '-extldflags "-static"'
 VERSION := v$(shell cat VERSION.go | grep -o -e '[0-9].[0-9].[0-9]')
+DOCKER_TAG ?= $(VERSION)
+DOCKER_IMAGE = joway/$(PROJECT_NAME):$(DOCKER_TAG)
 
 .PHONY: all
 all: install build
@@ -59,12 +61,10 @@ build: $(GOFILES)
 
 .PHONY: docker-build
 docker-build:
-	@echo ">> building docker image"
-	@docker build -t "joway/${PROJECT_NAME}:${VERSION}" .
+	@echo ">> building docker image ${DOCKER_IMAGE}"
+	@docker build -t $(DOCKER_IMAGE) .
 
 .PHONY: docker-push
 docker-push:
 	@echo ">> push docker image"
-	@docker push "joway/${PROJECT_NAME}:${VERSION}"
-	@docker tag "joway/${PROJECT_NAME}:${VERSION}" "joway/${PROJECT_NAME}:latest"
-	@docker push "joway/${PROJECT_NAME}:latest"
+	@docker push $(DOCKER_IMAGE)

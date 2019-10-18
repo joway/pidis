@@ -66,7 +66,7 @@ func (suite *DBTestSuite) TestSlaveOf() {
 	_, err = leader.Exec(util.CommandToArgs("set k3 xxx"))
 	assert.NoError(t, err)
 
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Millisecond * 1000)
 
 	result, err = follower.Exec(util.CommandToArgs("get k"))
 	assert.NoError(t, err)

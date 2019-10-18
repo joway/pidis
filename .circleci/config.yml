@@ -29,10 +29,10 @@ jobs:
       - run: mkdir -p ~/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
       - run: go get github.com/joway/pikv/...
       - run: pikv -v
-  publish:
+  publish-release:
     docker:
       - image: circleci/buildpack-deps:stretch
-    steps:
+    steps: &publishStep
       - checkout
       - setup_remote_docker
       - run: make docker-build
@@ -41,8 +41,31 @@ jobs:
           command: |
             echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
             make docker-push
+  publish-nightly:
+    docker:
+      - image: circleci/buildpack-deps:stretch
+    environment:
+      DOCKER_TAG: nightly
+    steps: *publishStep
+  publish-latest:
+    docker:
+      - image: circleci/buildpack-deps:stretch
+    environment:
+      DOCKER_TAG: latest
+    steps: *publishStep
 workflows:
   version: 2
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - publish-nightly:
+          context: docker
   pipeline:
     jobs:
       - unittest:
@@ -53,7 +76,11 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - publish:
+      - publish-latest:
+          filters:
+            tags:
+              only: /.*/
+      - publish-release:
           context: docker
           filters:
             tags:

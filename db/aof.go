@@ -8,10 +8,12 @@ import (
 	"github.com/tidwall/redcon"
 	"io"
 	"os"
+	"sync"
 	"time"
 )
 
 type AOFBus struct {
+	lock *sync.Mutex
 	path string
 
 	//format
@@ -55,21 +57,25 @@ func NewAOFBus(path string, offsetSize int) (*AOFBus, error) {
 
 		file:   file,
 		buffer: buffer,
+
+		lock: &sync.Mutex{},
 	}, nil
 }
 
 func (b *AOFBus) Append(args [][]byte) error {
 	uid := NewUID()
 	line := EncodeAOF(uid.Bytes(), args)
+	b.lock.Lock()
+	defer b.lock.Unlock()
 	if _, err := b.buffer.Write(line); err != nil {
 		return err
 	}
-
-	//TODO: performance
-	return b.Flush()
+	return nil
 }
 
 func (b *AOFBus) Flush() error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
 	return b.buffer.Flush()
 }
 

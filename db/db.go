@@ -116,7 +116,7 @@ func (db *Database) exec(args [][]byte, isInternal bool) (result *executor.Resul
 			return nil, types.ErrNodeReadOnly
 		}
 		if err := db.Record(args); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "record cmd failed")
 		}
 	}
 
@@ -140,6 +140,11 @@ func (db *Database) Daemon() error {
 
 	for {
 		select {
+		//flush aof
+		case <-time.After(time.Millisecond * 500):
+			if err := db.aofBus.Flush(); err != nil {
+				logger.Error("failed to flush aof file: %v", err)
+			}
 		case sig := <-db.sigFollowing:
 			if sig {
 				go func() {

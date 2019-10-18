@@ -55,6 +55,8 @@ func (suite *AOFTestSuite) TestSync() {
 		assert.NoError(suite.T(), err)
 	}
 
+	suite.NoError(bus.Flush())
+
 	stream := util.NewStreamBus()
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 	go func() {
