@@ -24,6 +24,8 @@ func (e KVExecutor) Exec(store storage.Storage, args [][]byte) (*Result, error) 
 		return e.Set(store, append(args, []byte("NX")))
 	case KEYS:
 		return e.Keys(store, args)
+	case EXISTS:
+		return e.Exists(store, args)
 	case TTL:
 		return e.TTL(store, args)
 	default:
@@ -144,4 +146,20 @@ func (e KVExecutor) TTL(store storage.Storage, args [][]byte) (*Result, error) {
 		code = -1
 	}
 	return &Result{output: util.MessageInt(code)}, nil
+}
+
+func (e KVExecutor) Exists(store storage.Storage, args [][]byte) (*Result, error) {
+	if len(args) < 2 {
+		return nil, types.ErrInvalidNumberOfArgs
+	}
+	keys := args[1:]
+	var count int64 = 0
+	for _, key := range keys {
+		//TODO: performance tuning, use key only get
+		_, err := store.Get(key)
+		if err == nil {
+			count++
+		}
+	}
+	return &Result{output: util.MessageInt(count)}, nil
 }

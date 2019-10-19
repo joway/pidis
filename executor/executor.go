@@ -15,12 +15,13 @@ var (
 	SLAVEOF  = "SLAVEOF"
 
 	//kv
-	GET   = "GET"
-	SET   = "SET"
-	SETNX = "SETNX"
-	DEL   = "DEL"
-	KEYS  = "KEYS"
-	TTL   = "TTL"
+	GET    = "GET"
+	SET    = "SET"
+	SETNX  = "SETNX"
+	DEL    = "DEL"
+	KEYS   = "KEYS"
+	EXISTS = "EXISTS"
+	TTL    = "TTL"
 )
 
 const (
@@ -35,7 +36,7 @@ func New(cmd string) Executor {
 	switch strings.ToUpper(cmd) {
 	case QUIT, SHUTDOWN, PING, ECHO, SLAVEOF:
 		return SystemExecutor{BaseExecutor{cmd: cmd, kind: TypeSystem}}
-	case GET, KEYS, TTL:
+	case GET, KEYS, TTL, EXISTS:
 		return KVExecutor{BaseExecutor{cmd: cmd, kind: TypeRead}}
 	case SET, SETNX, DEL:
 		return KVExecutor{BaseExecutor{cmd: cmd, kind: TypeWrite}}

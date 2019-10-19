@@ -105,3 +105,16 @@ func (suite *KVTestSuite) TestSetXX() {
 	suite.NoError(err)
 	suite.False(isCreated)
 }
+
+func (suite *KVTestSuite) TestExists() {
+	result, err := suite.cli.Set("k1", "v", 0).Result()
+	suite.NoError(err)
+	suite.Equal("OK", result)
+	result, err = suite.cli.Set("k2", "v", 0).Result()
+	suite.NoError(err)
+	suite.Equal("OK", result)
+
+	count, err := suite.cli.Exists("k1", "k2", "kx").Result()
+	suite.NoError(err)
+	suite.Equal(int64(2), count)
+}
