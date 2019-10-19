@@ -7,8 +7,9 @@ import (
 
 type Storage interface {
 	Get(key []byte) ([]byte, error)
-	Set(key, val []byte, ttl int64) error
+	Set(key, val []byte, ttl uint64) error
 	Del(keys [][]byte) error
+	TTL(key []byte) (uint64, error)
 	Scan(scanOpts ScanOptions) ([]KVPair, error)
 	Close() error
 

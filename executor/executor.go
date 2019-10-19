@@ -19,6 +19,7 @@ var (
 	SET  = "SET"
 	DEL  = "DEL"
 	KEYS = "KEYS"
+	TTL  = "TTL"
 )
 
 const (
@@ -33,7 +34,7 @@ func New(cmd string) Executor {
 	switch strings.ToUpper(cmd) {
 	case QUIT, SHUTDOWN, PING, ECHO, SLAVEOF:
 		return SystemExecutor{BaseExecutor{cmd: cmd, kind: TypeSystem}}
-	case GET, KEYS:
+	case GET, KEYS, TTL:
 		return KVExecutor{BaseExecutor{cmd: cmd, kind: TypeRead}}
 	case SET, DEL:
 		return KVExecutor{BaseExecutor{cmd: cmd, kind: TypeWrite}}

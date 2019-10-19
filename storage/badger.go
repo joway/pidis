@@ -51,12 +51,14 @@ func (storage *BadgerStorage) Get(key []byte) ([]byte, error) {
 	return output, err
 }
 
-func (storage *BadgerStorage) Set(key, val []byte, ttl int64) error {
+func (storage *BadgerStorage) Set(key, val []byte, ttl uint64) error {
 	return storage.db.Update(func(txn *badger.Txn) error {
-		if ttl < 1 {
+		if ttl == 0 {
 			return txn.Set(key, val)
 		} else {
-			e := badger.NewEntry(key, val).WithTTL(time.Duration(ttl) * time.Millisecond)
+			e := badger.
+				NewEntry(key, val).
+				WithTTL(time.Millisecond * time.Duration(ttl))
 			return txn.SetEntry(e)
 		}
 	})
@@ -149,4 +151,31 @@ func (storage *BadgerStorage) Snapshot(ctx context.Context, writer io.Writer) er
 func (storage *BadgerStorage) LoadSnapshot(ctx context.Context, reader io.Reader) error {
 	//TODO: custom maxPendingWrites
 	return storage.db.Load(reader, 256)
+}
+
+func (storage *BadgerStorage) TTL(key []byte) (uint64, error) {
+	var ttl uint64 = 0
+	err := storage.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+
+		ttl = item.ExpiresAt()
+		if ttl > 0 {
+			now := uint64(time.Now().Unix())
+			//to milliseconds
+			ttl = (ttl - now) * 1000
+			if ttl <= 0 {
+				//if key existed but ttl <= 0, return key not found error
+				return types.ErrKeyNotFound
+			}
+		}
+		//if not set ttl on key, return ttl = 0
+		return nil
+	})
+	if err == badger.ErrKeyNotFound {
+		return 0, types.ErrKeyNotFound
+	}
+	return ttl, err
 }
