@@ -26,6 +26,8 @@ func (e KVExecutor) Exec(store storage.Storage, args [][]byte) (*Result, error) 
 		return e.Keys(store, args)
 	case EXISTS:
 		return e.Exists(store, args)
+	case INCR:
+		return e.Incr(store, args)
 	case TTL:
 		return e.TTL(store, args)
 	default:
@@ -162,4 +164,30 @@ func (e KVExecutor) Exists(store storage.Storage, args [][]byte) (*Result, error
 		}
 	}
 	return &Result{output: util.MessageInt(count)}, nil
+}
+
+func (e KVExecutor) Incr(store storage.Storage, args [][]byte) (*Result, error) {
+	if len(args) != 2 {
+		return nil, types.ErrInvalidNumberOfArgs
+	}
+	key := args[1]
+	var num int64 = 0
+	val, err := store.Get(key)
+	if err == types.ErrKeyNotFound {
+		num = 1
+		val = []byte("1")
+	} else if err == nil {
+		num, err = strconv.ParseInt(string(val), 10, 64)
+		if err != nil {
+			return &Result{output: util.MessageError(err.Error())}, nil
+		}
+		num++
+		val = []byte(strconv.FormatInt(num, 10))
+	} else {
+		return nil, err
+	}
+	if err := store.Set(key, val, 0); err != nil {
+		return nil, err
+	}
+	return &Result{output: util.MessageInt(num)}, nil
 }

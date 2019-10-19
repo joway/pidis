@@ -118,3 +118,24 @@ func (suite *KVTestSuite) TestExists() {
 	suite.NoError(err)
 	suite.Equal(int64(2), count)
 }
+
+func (suite *KVTestSuite) TestIncr() {
+	result, err := suite.cli.Set("k1", "10", 0).Result()
+	suite.NoError(err)
+	suite.Equal("OK", result)
+	result, err = suite.cli.Set("k2", "x10", 0).Result()
+	suite.NoError(err)
+	suite.Equal("OK", result)
+
+	num, err := suite.cli.Incr("k1").Result()
+	suite.NoError(err)
+	suite.Equal(int64(11), num)
+
+	num, err = suite.cli.Incr("k2").Result()
+	suite.Error(err)
+	suite.Equal(int64(0), num)
+
+	num, err = suite.cli.Incr("k3").Result()
+	suite.NoError(err)
+	suite.Equal(int64(1), num)
+}
