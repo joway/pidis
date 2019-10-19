@@ -1,35 +1,107 @@
 package e2e
 
 import (
+	"fmt"
 	"github.com/go-redis/redis/v7"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 	"testing"
+	"time"
 )
 
-func TestKV_GetSetDel(t *testing.T) {
-	setup(t)
+type KVTestSuite struct {
+	suite.Suite
 
-	cli := getRedisClient(t)
-	result, err := cli.Set("k", "v", 0).Result()
-	assert.NoError(t, err)
-	assert.Equal(t, "OK", result)
-	result, err = cli.Set("k1", "", 0).Result()
-	assert.NoError(t, err)
-	assert.Equal(t, "OK", result)
+	cli *redis.Client
+}
 
-	result, err = cli.Get("k").Result()
-	assert.NoError(t, err)
-	assert.Equal(t, "v", result)
+func TestKVTestSuite(t *testing.T) {
+	suite.Run(t, new(KVTestSuite))
+}
 
-	count, err := cli.Del("k").Result()
-	assert.NoError(t, err)
-	assert.Equal(t, int64(1), count)
+func (suite *KVTestSuite) SetupTest() {
+	cli, err := getRedisClient()
+	suite.cli = cli
+	suite.NoError(err)
+}
 
-	result, err = cli.Get("k").Result()
-	assert.Equal(t, redis.Nil, err)
-	assert.Equal(t, "", result)
+func (suite *KVTestSuite) TearDownTest() {
+	suite.NoError(clearRedis(suite.cli))
+}
 
-	result, err = cli.Get("k1").Result()
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "", result)
+func (suite *KVTestSuite) TestGetSetDel() {
+	result, err := suite.cli.Set("k", "v", 0).Result()
+	suite.NoError(err)
+	suite.Equal("OK", result)
+	result, err = suite.cli.Set("k1", "", 0).Result()
+	suite.NoError(err)
+	suite.Equal("OK", result)
+
+	result, err = suite.cli.Get("k").Result()
+	suite.NoError(err)
+	suite.Equal("v", result)
+
+	count, err := suite.cli.Del("k").Result()
+	suite.NoError(err)
+	suite.Equal(int64(1), count)
+
+	result, err = suite.cli.Get("k").Result()
+	suite.Equal(redis.Nil, err)
+	suite.Equal("", result)
+
+	result, err = suite.cli.Get("k1").Result()
+	suite.Equal(nil, err)
+	suite.Equal("", result)
+}
+
+func (suite *KVTestSuite) TestTTL() {
+	result, err := suite.cli.Set("k", "v", 0).Result()
+	suite.NoError(err)
+	suite.Equal("OK", result)
+	result, err = suite.cli.Set("kx", "v", time.Second).Result()
+	suite.NoError(err)
+	suite.Equal("OK", result)
+
+	ttl, err := suite.cli.TTL("k").Result()
+	suite.NoError(err)
+	suite.True(ttl == -1)
+	ttl, err = suite.cli.TTL("kn").Result()
+	suite.NoError(err)
+	suite.True(ttl == -2)
+	ttl, err = suite.cli.TTL("kx").Result()
+	suite.NoError(err)
+	suite.Equal(1, int(ttl.Seconds()))
+
+	time.Sleep(time.Millisecond * 1100)
+	ttl, err = suite.cli.TTL("kx").Result()
+	suite.NoError(err)
+	suite.Equal(0, int(ttl.Seconds()))
+}
+
+func (suite *KVTestSuite) TestSetNX() {
+	result, err := suite.cli.Set("k1", "v", 0).Result()
+	suite.NoError(err)
+	suite.Equal("OK", result)
+
+	isCreated, err := suite.cli.SetNX("k1", "v", 0).Result()
+	suite.NoError(err)
+	suite.False(isCreated)
+
+	isCreated, err = suite.cli.SetNX("k2", "v", 0).Result()
+	suite.NoError(err)
+	fmt.Println("isCreated", isCreated)
+	suite.True(isCreated)
+}
+
+func (suite *KVTestSuite) TestSetXX() {
+	result, err := suite.cli.Set("k1", "v", 0).Result()
+	suite.NoError(err)
+	suite.Equal("OK", result)
+
+	isCreated, err := suite.cli.SetXX("k1", "v", time.Second).Result()
+	suite.NoError(err)
+	suite.True(isCreated)
+
+	isCreated, err = suite.cli.SetXX("k2", "v", time.Second).Result()
+	suite.NoError(err)
+	suite.False(isCreated)
 }

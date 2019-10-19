@@ -35,7 +35,7 @@ func (storage *MemoryStorage) Get(key []byte) ([]byte, error) {
 	return output, err
 }
 
-func (storage *MemoryStorage) Set(key, val []byte, ttl int64) error {
+func (storage *MemoryStorage) Set(key, val []byte, ttl uint64) error {
 	var opts *buntdb.SetOptions
 	if ttl == 0 {
 		opts = nil
@@ -95,4 +95,26 @@ func (storage *MemoryStorage) Scan(scanOpts ScanOptions) ([]KVPair, error) {
 	})
 
 	return output, err
+}
+
+func (storage *MemoryStorage) TTL(key []byte) (uint64, error) {
+	var ttl uint64
+	err := storage.db.View(func(tx *buntdb.Tx) error {
+		exp, err := tx.TTL(string(key))
+		if err == buntdb.ErrNotFound {
+			return types.ErrKeyNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if exp == 0 {
+			return types.ErrKeyNotFound
+		} else if exp < 0 {
+			ttl = 0
+		} else if exp > 0 {
+			ttl = uint64(exp.Milliseconds())
+		}
+		return err
+	})
+	return ttl, err
 }

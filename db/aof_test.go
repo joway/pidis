@@ -19,6 +19,10 @@ type AOFTestSuite struct {
 	dir string
 }
 
+func TestAOF(t *testing.T) {
+	suite.Run(t, new(AOFTestSuite))
+}
+
 func (suite *AOFTestSuite) SetupTest() {
 	suite.dir = "/tmp/pikv/aof"
 	_ = os.RemoveAll(suite.dir)
@@ -90,8 +94,4 @@ func (suite *AOFTestSuite) TestSync() {
 			}
 		}
 	}
-}
-
-func TestAOF(t *testing.T) {
-	suite.Run(t, new(AOFTestSuite))
 }

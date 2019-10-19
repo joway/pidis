@@ -20,6 +20,10 @@ type DBTestSuite struct {
 	dir string
 }
 
+func TestDatabase(t *testing.T) {
+	suite.Run(t, new(DBTestSuite))
+}
+
 func (suite *DBTestSuite) SetupTest() {
 	suite.dir = "/tmp/pikv/db"
 	_ = os.RemoveAll(suite.dir)
@@ -112,8 +116,4 @@ func (suite *DBTestSuite) TestSnapshot() {
 	assert.NoError(t, err)
 	result, err := newDb.Exec(util.CommandToArgs("get a"))
 	assert.Equal(t, result.Output()[4], byte('x'))
-}
-
-func TestDatabase(t *testing.T) {
-	suite.Run(t, new(DBTestSuite))
 }

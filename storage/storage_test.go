@@ -4,69 +4,64 @@ import (
 	"fmt"
 	"github.com/joway/pikv/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 	"os"
 	"testing"
 	"time"
 )
 
-var tmpStorageDir = "/tmp/pikv/storage"
+type StorageTestSuite struct {
+	suite.Suite
 
-func setup() {
-	_ = os.RemoveAll(tmpStorageDir)
+	dir string
 }
 
-//
-//func TestBadgerStorage(t *testing.T) {
-//	setup()
-//
-//	badgerStorage, err := NewBadgerStorage(Options{Dir: tmpStorageDir})
-//	assert.NoError(t, err)
-//	testStorage(t, badgerStorage)
-//}
-//
-//func TestMemoryStorage(t *testing.T) {
-//	setup()
-//
-//	memoryStorage, err := NewMemoryStorage(Options{})
-//	assert.NoError(t, err)
-//	testStorage(t, memoryStorage)
-//}
-//
-//func TestBadgerStorageWithTTL(t *testing.T) {
-//	setup()
-//
-//	badgerStorage, err := NewBadgerStorage(Options{Dir: tmpStorageDir})
-//	assert.NoError(t, err)
-//	testStorageWithTTL(t, badgerStorage)
-//}
-//
-//func TestMemoryStorageWithTTL(t *testing.T) {
-//	setup()
-//
-//	memoryStorage, err := NewMemoryStorage(Options{})
-//	assert.NoError(t, err)
-//	testStorageWithTTL(t, memoryStorage)
-//}
-
-func TestBadgerStorage_Scan(t *testing.T) {
-	setup()
-
-	badgerStorage, err := NewBadgerStorage(Options{Dir: tmpStorageDir})
-	assert.NoError(t, err)
-	testStorageScan(t, badgerStorage)
+func TestStorage(t *testing.T) {
+	suite.Run(t, new(StorageTestSuite))
 }
 
-func TestMemoryStorage_Scan(t *testing.T) {
-	setup()
+func (suite *StorageTestSuite) SetupTest() {
+	suite.dir = "/tmp/pikv/storage"
+	_ = os.RemoveAll(suite.dir)
+}
 
+func (suite *StorageTestSuite) TestBadgerStorage() {
+	badgerStorage, err := NewBadgerStorage(Options{Dir: suite.dir})
+	suite.NoError(err)
+	testStorage(suite.T(), badgerStorage)
+}
+
+func (suite *StorageTestSuite) TestMemoryStorage() {
 	memoryStorage, err := NewMemoryStorage(Options{})
-	assert.NoError(t, err)
-	testStorageScan(t, memoryStorage)
+	suite.NoError(err)
+	testStorage(suite.T(), memoryStorage)
+}
+
+func (suite *StorageTestSuite) TestBadgerStorageWithTTL() {
+	badgerStorage, err := NewBadgerStorage(Options{Dir: suite.dir})
+	suite.NoError(err)
+	testStorageWithTTL(suite.T(), badgerStorage)
+}
+
+func (suite *StorageTestSuite) TestMemoryStorageWithTTL() {
+	memoryStorage, err := NewMemoryStorage(Options{})
+	suite.NoError(err)
+	testStorageWithTTL(suite.T(), memoryStorage)
+}
+
+func (suite *StorageTestSuite) TestBadgerStorage_Scan() {
+	badgerStorage, err := NewBadgerStorage(Options{Dir: suite.dir})
+	suite.NoError(err)
+	testStorageScan(suite.T(), badgerStorage)
+}
+
+func (suite *StorageTestSuite) TestMemoryStorage_Scan() {
+	memoryStorage, err := NewMemoryStorage(Options{})
+	suite.NoError(err)
+	testStorageScan(suite.T(), memoryStorage)
 }
 
 func testStorage(t *testing.T, storage Storage) {
-	setup()
-
 	for i := 0; i < 100; i++ {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("%d", i)
@@ -93,20 +88,25 @@ func testStorage(t *testing.T, storage Storage) {
 }
 
 func testStorageWithTTL(t *testing.T, storage Storage) {
-	setup()
-
-	err := storage.Set([]byte("k"), []byte("xxx"), 1000)
+	err := storage.Set([]byte("k"), []byte("xxx"), 2000)
 	assert.NoError(t, err)
+	ttl, err := storage.TTL([]byte("k"))
+	assert.NoError(t, err)
+	assert.LessOrEqual(t, ttl, uint64(2000))
 	v, err := storage.Get([]byte("k"))
 	assert.Equal(t, "xxx", string(v))
-	time.Sleep(time.Second)
+
+	time.Sleep(time.Millisecond * 1000)
+	ttl, err = storage.TTL([]byte("k"))
+	assert.NoError(t, err)
+	assert.LessOrEqual(t, ttl, uint64(1000))
+
+	time.Sleep(time.Millisecond * 1000)
 	v, err = storage.Get([]byte("k"))
 	assert.Nil(t, v)
 }
 
 func testStorageScan(t *testing.T, storage Storage) {
-	setup()
-
 	for i := 0; i < 100; i++ {
 		k := fmt.Sprintf("k%d", i)
 		v := fmt.Sprintf("%d", i)

@@ -4,9 +4,7 @@ import (
 	"github.com/go-redis/redis/v7"
 	"github.com/joway/pikv/db"
 	"github.com/joway/pikv/util"
-	"github.com/stretchr/testify/assert"
 	"os"
-	"testing"
 )
 
 var endpoint = util.EnvGet("E2E_ENDPOINT", "0.0.0.0:10001")
@@ -23,24 +21,17 @@ func init() {
 	db.ListenRedisProtoServer(database, endpoint)
 }
 
-func setup(t *testing.T) {
-	if isE2ERedis {
-		return
-	}
+func clearRedis(cli *redis.Client) error {
 	//delete all keys
-	cli := getRedisClient(t)
 	keys, err := cli.Keys("*").Result()
-	assert.NoError(t, err)
 	cli.Del(keys...)
+	return err
 }
 
-func getRedisClient(t *testing.T) *redis.Client {
+func getRedisClient() (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr: endpoint,
 	})
-	pong, err := client.Ping().Result()
-	assert.NoError(t, err)
-	assert.Equal(t, "PONG", pong)
-
-	return client
+	_, err := client.Ping().Result()
+	return client, err
 }
