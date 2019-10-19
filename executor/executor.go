@@ -21,6 +21,7 @@ var (
 	DEL    = "DEL"
 	KEYS   = "KEYS"
 	EXISTS = "EXISTS"
+	INCR   = "INCR"
 	TTL    = "TTL"
 )
 
@@ -38,7 +39,7 @@ func New(cmd string) Executor {
 		return SystemExecutor{BaseExecutor{cmd: cmd, kind: TypeSystem}}
 	case GET, KEYS, TTL, EXISTS:
 		return KVExecutor{BaseExecutor{cmd: cmd, kind: TypeRead}}
-	case SET, SETNX, DEL:
+	case SET, SETNX, DEL, INCR:
 		return KVExecutor{BaseExecutor{cmd: cmd, kind: TypeWrite}}
 	default:
 		return SystemExecutor{BaseExecutor{cmd: cmd, kind: TypeSystem}}

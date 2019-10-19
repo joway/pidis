@@ -47,6 +47,7 @@ $ redis-cli -p 6380
   - SETNX key value  
   - DEL key [key ...]
   - EXISTS key [key ...]
+  - INCR key
   - TTL key
 
 ## Benchmark
