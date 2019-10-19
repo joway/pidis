@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"fmt"
 	"github.com/go-redis/redis/v7"
 	"github.com/stretchr/testify/suite"
 	"testing"
@@ -74,4 +75,33 @@ func (suite *KVTestSuite) TestTTL() {
 	ttl, err = suite.cli.TTL("kx").Result()
 	suite.NoError(err)
 	suite.Equal(0, int(ttl.Seconds()))
+}
+
+func (suite *KVTestSuite) TestSetNX() {
+	result, err := suite.cli.Set("k1", "v", 0).Result()
+	suite.NoError(err)
+	suite.Equal("OK", result)
+
+	isCreated, err := suite.cli.SetNX("k1", "v", 0).Result()
+	suite.NoError(err)
+	suite.False(isCreated)
+
+	isCreated, err = suite.cli.SetNX("k2", "v", 0).Result()
+	suite.NoError(err)
+	fmt.Println("isCreated", isCreated)
+	suite.True(isCreated)
+}
+
+func (suite *KVTestSuite) TestSetXX() {
+	result, err := suite.cli.Set("k1", "v", 0).Result()
+	suite.NoError(err)
+	suite.Equal("OK", result)
+
+	isCreated, err := suite.cli.SetXX("k1", "v", time.Second).Result()
+	suite.NoError(err)
+	suite.True(isCreated)
+
+	isCreated, err = suite.cli.SetXX("k2", "v", time.Second).Result()
+	suite.NoError(err)
+	suite.False(isCreated)
 }

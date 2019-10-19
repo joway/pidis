@@ -20,6 +20,8 @@ func (e KVExecutor) Exec(store storage.Storage, args [][]byte) (*Result, error) 
 		return e.Del(store, args)
 	case SET:
 		return e.Set(store, args)
+	case SETNX:
+		return e.Set(store, append(args, []byte("NX")))
 	case KEYS:
 		return e.Keys(store, args)
 	case TTL:
@@ -80,8 +82,9 @@ func (e KVExecutor) Set(store storage.Storage, args [][]byte) (*Result, error) {
 		_, err := store.Get(key)
 		if err == types.ErrKeyNotFound {
 			err = store.Set(key, val, ttl)
+		} else {
+			return &Result{output: util.MessageNull()}, nil
 		}
-		return &Result{output: util.MessageNull()}, nil
 	case "XX":
 		//TODO: performance, use IsExisted check
 		_, err := store.Get(key)
