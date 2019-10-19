@@ -43,7 +43,7 @@ $ redis-cli -p 6380
 
 - KV
   - GET key  
-  - SET key val  
+  - SET key value [EX seconds|PX milliseconds] [NX|XX]  
   - DEL key [key ...]
 
 ## Benchmark

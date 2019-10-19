@@ -70,8 +70,29 @@ func (e KVExecutor) Set(store storage.Storage, args [][]byte) (*Result, error) {
 			}
 		}
 	}
-
-	if err := store.Set(key, val, ttl); err != nil {
+	setMode := ""
+	if len(args) == 4 || len(args) == 6 {
+		setMode = strings.ToUpper(string(args[len(args)-1]))
+	}
+	switch setMode {
+	case "NX":
+		//TODO: performance, use IsExisted check
+		_, err := store.Get(key)
+		if err == types.ErrKeyNotFound {
+			err = store.Set(key, val, ttl)
+		}
+		return &Result{output: util.MessageNull()}, nil
+	case "XX":
+		//TODO: performance, use IsExisted check
+		_, err := store.Get(key)
+		if err == types.ErrKeyNotFound {
+			return &Result{output: util.MessageNull()}, nil
+		}
+		err = store.Set(key, val, ttl)
+	default:
+		err = store.Set(key, val, ttl)
+	}
+	if err != nil {
 		logger.Error("%v", err)
 		return nil, types.ErrRuntimeError
 	}
