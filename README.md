@@ -45,6 +45,7 @@ $ redis-cli -p 6380
   - GET key  
   - SET key value [EX seconds|PX milliseconds] [NX|XX]  
   - DEL key [key ...]
+  - TTL key
 
 ## Benchmark
 
