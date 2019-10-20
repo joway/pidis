@@ -5,6 +5,8 @@ jobs:
       - image: circleci/golang:1.13
       - image: redis
     working_directory: /go/src/github.com/joway/pikv
+    environment:
+      GO111MODULE: on
     steps:
       - checkout
       - restore_cache:
@@ -25,6 +27,8 @@ jobs:
   install:
     docker:
       - image: circleci/golang:1.13
+    environment:
+      GO111MODULE: on
     steps:
       - run: mkdir -p ~/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
       - run: go get github.com/joway/pikv/...@$CIRCLE_BRANCH
