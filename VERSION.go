@@ -1,3 +1,3 @@
 package pikv
 
-var VERSION = "0.0.9"
+var VERSION = "0.1.0"
