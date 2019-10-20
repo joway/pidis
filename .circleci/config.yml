@@ -51,7 +51,7 @@ jobs:
             autoreconf -ivf && ./configure && make && sudo make install
       - run: mkdir -p /tmp/pikv
       - run: make
-      - run: nohup ./bin/pikv -p 6380
+      - run: nohup ./bin/pikv -p 6380 --rpcPort 8000
       - save_cache:
           key: v1-cache-{{ checksum "go.sum" }}
           paths:
