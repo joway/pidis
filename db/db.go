@@ -168,6 +168,7 @@ func (db *Database) Daemon() error {
 
 func (db *Database) SlaveOf(host, port string) error {
 	address := fmt.Sprintf("%s:%s", host, port)
+	logger.Info("establish following connection: %s", address)
 	var err error
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*1)
 	db.followingConn, err = grpc.DialContext(
