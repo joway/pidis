@@ -37,7 +37,7 @@ test:
 .PHONY: e2e
 e2e:
 	@echo ">> run e2e test"
-	@go test -race -covermode=atomic -v ./e2e/...
+	@go test -race -v ./executor/...
 
 .PHONY: fmt
 fmt:
