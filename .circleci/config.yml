@@ -27,6 +27,10 @@ jobs:
     docker:
       - image: circleci/golang:1.13
       - image: redis
+      - image: joway/ledisdb
+        command: "ledis-server --config=/config.toml -addr 0.0.0.0:6381"
+      - image: alash3al/redix
+        command: "-resp-addr 0.0.0.0:6382"
     environment:
       GO111MODULE: 'on'
     steps:
@@ -47,7 +51,7 @@ jobs:
             autoreconf -ivf && ./configure && make && sudo make install
       - run: mkdir -p /tmp/pikv
       - run: make
-      - run: nohup ./bin/pikv -p 6380
+      - run: nohup ./bin/pikv -p 6380 --rpcPort 8000
       - save_cache:
           key: v1-cache-{{ checksum "go.sum" }}
           paths:
@@ -59,11 +63,23 @@ jobs:
           name: Redis Benchmark pikv
           command: redis-benchmark -p 6380 -q -t SET,GET -P 1024 -r 1000000000 -n 1000000
       - run:
+          name: Redis Benchmark ledisdb
+          command: redis-benchmark -p 6381 -q -t SET,GET -P 1024 -r 1000000000 -n 1000000
+      - run:
+          name: Redis Benchmark redix
+          command: redis-benchmark -p 6382 -q -t SET,GET -P 1024 -r 1000000000 -n 1000000
+      - run:
           name: Memtier Benchmark redis
           command: memtier_benchmark -s 0.0.0.0 -p 6379 --hide-histogram
       - run:
           name: Memtier Benchmark pikv
           command: memtier_benchmark -s 0.0.0.0 -p 6380 --hide-histogram
+      - run:
+          name: Memtier Benchmark ledisdb
+          command: memtier_benchmark -s 0.0.0.0 -p 6381 --hide-histogram
+      - run:
+          name: Memtier Benchmark redix
+          command: memtier_benchmark -s 0.0.0.0 -p 6382 --hide-histogram
   install:
     docker:
       - image: circleci/golang:1.13
