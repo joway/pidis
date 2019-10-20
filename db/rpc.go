@@ -33,7 +33,7 @@ func (s *PiKVService) Snapshot(req *proto.SnapshotReq, srv proto.PiKV_SnapshotSe
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	bus := util.NewStreamBus()
+	bus := util.NewStreamBus(1)
 	var err error = nil
 	go func() {
 		defer bus.Close()
@@ -41,12 +41,23 @@ func (s *PiKVService) Snapshot(req *proto.SnapshotReq, srv proto.PiKV_SnapshotSe
 		err = s.db.storage.Snapshot(ctx, bus)
 	}()
 	rpcLogger.Info("sending snapshot")
+	payloadMaxBytes := 1024 * 1024 // 1MB
 	for buffer := range bus.Read() {
-		resp := &proto.SnapshotResp{
-			Payload: buffer,
-		}
-		if err := srv.Send(resp); err != nil {
-			return err
+		for len(buffer) > 0 {
+			var payload []byte
+			if len(buffer) >= payloadMaxBytes {
+				payload = buffer[:payloadMaxBytes]
+				buffer = buffer[payloadMaxBytes:]
+			} else {
+				payload = buffer
+				buffer = []byte{}
+			}
+			resp := &proto.SnapshotResp{
+				Payload: payload,
+			}
+			if err := srv.Send(resp); err != nil {
+				return err
+			}
 		}
 	}
 	if err != nil {
@@ -61,7 +72,7 @@ func (s *PiKVService) Oplog(req *proto.OplogReq, srv proto.PiKV_OplogServer) err
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var syncErr = make(chan error, 1)
-	bus := util.NewStreamBus()
+	bus := util.NewStreamBus(1024)
 	go func() {
 		defer bus.Close()
 		rpcLogger.Info("fetching oplog")

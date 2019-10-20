@@ -94,7 +94,7 @@ func startServer(cfg Config) error {
 	}()
 
 	redisServer := redcon.NewServer(
-		"",
+		rdsAddr,
 		db.GetRedisCmdHandler(database),
 		nil,
 		nil,

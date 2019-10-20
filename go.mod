@@ -14,7 +14,6 @@ require (
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/rs/xid v1.2.1
-	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/tidwall/btree v0.0.0-20170113224114-9876f1454cf0 // indirect
 	github.com/tidwall/buntdb v1.1.0

@@ -7,8 +7,8 @@ type StreamBus struct {
 	ch    chan []byte
 }
 
-func NewStreamBus() *StreamBus {
-	return &StreamBus{ch: make(chan []byte, 1024)}
+func NewStreamBus(size int) *StreamBus {
+	return &StreamBus{ch: make(chan []byte, size)}
 }
 
 func (w *StreamBus) Read() <-chan []byte {
