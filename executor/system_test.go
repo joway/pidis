@@ -1,4 +1,4 @@
-package e2e
+package executor_test
 
 import (
 	"github.com/go-redis/redis/v7"
@@ -17,13 +17,13 @@ func TestSystemTestSuite(t *testing.T) {
 }
 
 func (suite *SystemTestSuite) SetupTest() {
-	cli, err := getRedisClient()
+	cli, err := e2eGetRedisClient()
 	suite.cli = cli
 	suite.NoError(err)
 }
 
 func (suite *SystemTestSuite) TearDownTest() {
-	suite.NoError(clearRedis(suite.cli))
+	suite.NoError(e2eClearRedis(suite.cli))
 }
 
 func (suite *SystemTestSuite) TestEcho() {

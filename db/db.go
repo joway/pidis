@@ -179,6 +179,8 @@ func (db *Database) SlaveOf(host, port string) error {
 	if err != nil {
 		return types.ErrNodeConnectFailed
 	}
+	logger.Info("established following connection: %s", address)
+
 	db.following = &Node{
 		host: host,
 		port: port,

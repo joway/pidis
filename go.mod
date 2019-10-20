@@ -3,6 +3,7 @@ module github.com/joway/pikv
 go 1.13
 
 require (
+	github.com/akutz/memconn v0.1.0
 	github.com/dgraph-io/badger v1.6.0
 	github.com/go-redis/redis/v7 v7.0.0-beta.4
 	github.com/gobwas/glob v0.2.3

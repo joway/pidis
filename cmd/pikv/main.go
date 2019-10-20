@@ -5,7 +5,9 @@ import (
 	"github.com/joway/loki"
 	"github.com/joway/pikv"
 	"github.com/joway/pikv/db"
+	"github.com/tidwall/redcon"
 	"github.com/urfave/cli"
+	"net"
 	"os"
 	"os/signal"
 )
@@ -71,23 +73,47 @@ func startServer(cfg Config) error {
 	}()
 	database.Run()
 
-	externalAddress := fmt.Sprintf(":%s", cfg.port)
-	rpcAddress := fmt.Sprintf(":%s", cfg.rpcPort)
-
-	rpcServer, err := db.ListenRpcServer(database, rpcAddress)
+	rdsAddr := fmt.Sprintf(":%s", cfg.port)
+	rpcAddr := fmt.Sprintf(":%s", cfg.rpcPort)
+	rdsLis, err := net.Listen("tcp", rdsAddr)
+	logger.Info("running pikv server at: %s", rdsAddr)
 	if err != nil {
 		logger.Fatal("%v", err)
 	}
-	redisServer := db.ListenRedisProtoServer(database, externalAddress)
+	rpcLis, err := net.Listen("tcp", rpcAddr)
+	logger.Info("running redis server at: %s", rpcAddr)
+	if err != nil {
+		logger.Fatal("%v", err)
+	}
+
+	rpcServer := db.NewRpcServer(database)
+	go func() {
+		if err := rpcServer.Serve(rpcLis); err != nil {
+			logger.Fatal("%v", err)
+		}
+	}()
+
+	redisServer := redcon.NewServer(
+		rdsAddr,
+		db.GetRedisCmdHandler(database),
+		nil,
+		nil,
+	)
+	go func() {
+		if err := redisServer.Serve(rdsLis); err != nil {
+			logger.Fatal("%v", err)
+		}
+	}()
 
 	stop := make(chan os.Signal)
 	signal.Notify(stop, os.Interrupt)
 	select {
 	case <-stop:
-		rpcServer.Stop()
 		if err := redisServer.Close(); err != nil {
-			return err
+			logger.Error("%v", err)
 		}
+		rpcServer.GracefulStop()
+
 	}
 	return nil
 }

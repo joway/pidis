@@ -32,12 +32,12 @@ release:
 .PHONY: test
 test:
 	@echo ">> run test"
-	@go test -p 1 -race -coverprofile=coverage.txt -covermode=atomic -v ./...
+	@go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
 
 .PHONY: e2e
 e2e:
 	@echo ">> run e2e test"
-	@go test -p 1 -race -covermode=atomic -v ./e2e/...
+	@go test -race -v ./executor/...
 
 .PHONY: fmt
 fmt:

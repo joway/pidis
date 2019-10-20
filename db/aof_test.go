@@ -61,7 +61,7 @@ func (suite *AOFTestSuite) TestSync() {
 
 	suite.NoError(bus.Flush())
 
-	stream := util.NewStreamBus()
+	stream := util.NewStreamBus(1024)
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 	go func() {
 		select {
