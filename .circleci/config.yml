@@ -44,7 +44,7 @@ jobs:
 
             git clone https://github.com/RedisLabs/memtier_benchmark.git
             cd memtier_benchmark
-            autoreconf -ivf && ./configure && make && make install
+            autoreconf -ivf && ./configure && make && sudo make install
       - run: mkdir -p /tmp/pikv
       - run: make
       - run: nohup ./bin/pikv -p 6380
