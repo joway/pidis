@@ -5,10 +5,8 @@ import (
 	"github.com/joway/loki"
 	"github.com/joway/pikv"
 	"github.com/joway/pikv/db"
-	"github.com/soheilhy/cmux"
 	"github.com/tidwall/redcon"
 	"github.com/urfave/cli"
-	"io"
 	"net"
 	"os"
 	"os/signal"
@@ -60,11 +58,6 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		logger.Fatal("%v", err)
 	}
-}
-
-func matchNotGrpc() cmux.Matcher {
-	m := cmux.HTTP2HeaderField("content-type", "application/grpc")
-	return func(r io.Reader) bool { return !m(r) }
 }
 
 func startServer(cfg Config) error {

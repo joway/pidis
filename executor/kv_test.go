@@ -1,4 +1,4 @@
-package e2e
+package executor_test
 
 import (
 	"fmt"
@@ -19,13 +19,13 @@ func TestKVTestSuite(t *testing.T) {
 }
 
 func (suite *KVTestSuite) SetupTest() {
-	cli, err := getRedisClient()
+	cli, err := e2eGetRedisClient()
 	suite.cli = cli
 	suite.NoError(err)
 }
 
 func (suite *KVTestSuite) TearDownTest() {
-	suite.NoError(clearRedis(suite.cli))
+	suite.NoError(e2eClearRedis(suite.cli))
 }
 
 func (suite *KVTestSuite) TestGetSetDel() {
