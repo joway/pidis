@@ -12,7 +12,6 @@ jobs:
       - restore_cache:
           keys:
             - v1-cache-{{ checksum "go.sum" }}
-      - run: sudo apt update && sudo apt install -y gcc
       - run: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.21.0
       - run: mkdir -p /tmp/pikv
       - run: make
@@ -24,6 +23,47 @@ jobs:
       - run: make test
       - run: E2E_REDIS_ENABLE=true E2E_ENDPOINT=127.0.0.1:6379 make e2e
       - run: bash <(curl -s https://codecov.io/bash)
+  benchmark:
+    docker:
+      - image: circleci/golang:1.13
+      - image: redis
+    environment:
+      GO111MODULE: 'on'
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-cache-{{ checksum "go.sum" }}
+      - run:
+          name: Install pkg
+          command: |
+            sudo apt update
+            sudo apt install -y redis-server \
+            build-essential autoconf automake libpcre3-dev \
+            libevent-dev pkg-config zlib1g-dev libssl-dev
+
+            git clone https://github.com/RedisLabs/memtier_benchmark.git
+            cd memtier_benchmark
+            autoreconf -ivf && ./configure && make && sudo make install
+      - run: mkdir -p /tmp/pikv
+      - run: make
+      - run: nohup ./bin/pikv -p 6380
+      - save_cache:
+          key: v1-cache-{{ checksum "go.sum" }}
+          paths:
+            - "vendor"
+      - run:
+          name: Redis Benchmark redis
+          command: redis-benchmark -p 6379 -q -t SET,GET -P 1024 -r 1000000000 -n 1000000
+      - run:
+          name: Redis Benchmark pikv
+          command: redis-benchmark -p 6380 -q -t SET,GET -P 1024 -r 1000000000 -n 1000000
+      - run:
+          name: Memtier Benchmark redis
+          command: memtier_benchmark -s 0.0.0.0 -p 6379 --hide-histogram
+      - run:
+          name: Memtier Benchmark pikv
+          command: memtier_benchmark -s 0.0.0.0 -p 6380 --hide-histogram
   install:
     docker:
       - image: circleci/golang:1.13
@@ -76,6 +116,10 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - benchmark:
+          filters:
+            tags:
+              only: /.*/
       - install:
           filters:
             tags:
@@ -98,3 +142,4 @@ workflows:
           requires:
             - unittest
             - install
+            - benchmark
