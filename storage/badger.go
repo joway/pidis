@@ -161,17 +161,20 @@ func (storage *BadgerStorage) TTL(key []byte) (uint64, error) {
 			return err
 		}
 
-		ttl = item.ExpiresAt()
-		if ttl > 0 {
-			now := uint64(time.Now().Unix())
-			//to milliseconds
-			ttl = (ttl - now) * 1000
-			if ttl <= 0 {
-				//if key existed but ttl <= 0, return key not found error
-				return types.ErrKeyNotFound
-			}
+		exp := item.ExpiresAt()
+		if exp == 0 {
+			//if not set ttl on key, return ttl = 0
+			return nil
 		}
-		//if not set ttl on key, return ttl = 0
+
+		now := time.Now().Unix()
+		//to milliseconds
+		t := (int64(exp) - now) * 1000
+		if t <= 0 {
+			//if key existed but ttl <= 0, return key not found error
+			return types.ErrKeyNotFound
+		}
+		ttl = uint64(t)
 		return nil
 	})
 	if err == badger.ErrKeyNotFound {

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/joway/pikv/util"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"os"
 	"path"
@@ -33,22 +32,22 @@ func (suite *AOFTestSuite) TestDecode() {
 	text := []byte("*4\r\n$12\r\n000000000000\r\n$3\r\nset\r\n$1\r\nk\r\n$1\r\nv\r\n" +
 		"*3\r\n$12\r\n000000000000\r\n$3\r\nget\r\n$1\r\nk\r\n")
 	uid, args, leftover, err := DecodeAOF(text)
-	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), "000000000000", string(uid))
-	assert.Equal(suite.T(), "*3\r\n$12\r\n000000000000\r\n$3\r\nget\r\n$1\r\nk\r\n", string(leftover))
-	assert.Equal(suite.T(), "set k v", string(bytes.Join(args, []byte(" "))))
+	suite.NoError(err)
+	suite.Equal("000000000000", string(uid))
+	suite.Equal("*3\r\n$12\r\n000000000000\r\n$3\r\nget\r\n$1\r\nk\r\n", string(leftover))
+	suite.Equal("set k v", string(bytes.Join(args, []byte(" "))))
 }
 
 func (suite *AOFTestSuite) TestEncode() {
 	uid := NewUID().Bytes()
 	args := [][]byte{[]byte("set"), []byte("k"), []byte("v")}
 	encoded := EncodeAOF(uid, args)
-	assert.Equal(suite.T(), fmt.Sprintf("*4\r\n$12\r\n%s\r\n$3\r\nset\r\n$1\r\nk\r\n$1\r\nv\r\n", uid), string(encoded))
+	suite.Equal(fmt.Sprintf("*4\r\n$12\r\n%s\r\n$3\r\nset\r\n$1\r\nk\r\n$1\r\nv\r\n", uid), string(encoded))
 }
 
 func (suite *AOFTestSuite) TestSync() {
 	bus, err := NewAOFBus(path.Join(suite.dir, "test.aof"), UIDSize)
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 	var offset []byte
 	for i := 0; i < 100; i++ {
 		if i == 50 {
@@ -56,7 +55,7 @@ func (suite *AOFTestSuite) TestSync() {
 		}
 		args := util.CommandToArgs(fmt.Sprintf("set k%d xxx", i))
 		err := bus.Append(args)
-		assert.NoError(suite.T(), err)
+		suite.NoError(err)
 	}
 
 	suite.NoError(bus.Flush())
@@ -69,7 +68,7 @@ func (suite *AOFTestSuite) TestSync() {
 			return
 		default:
 			if err := bus.Sync(ctx, stream, offset); err != nil {
-				assert.NoError(suite.T(), err)
+				suite.NoError(err)
 			}
 		}
 	}()
@@ -78,18 +77,18 @@ func (suite *AOFTestSuite) TestSync() {
 	for {
 		select {
 		case <-ctx.Done():
-			assert.Equal(suite.T(), 99, total)
+			suite.Equal(99, total)
 			return
 		case content := <-stream.Read():
 			for {
 				ts, args, leftover, err := DecodeAOF(content)
-				assert.NoError(suite.T(), err)
+				suite.NoError(err)
 				if ts == nil && args == nil {
 					break
 				}
 				total += 1
-				assert.True(suite.T(), bytes.Compare(offset, ts) <= 0)
-				assert.Equal(suite.T(), string(args[1]), fmt.Sprintf("k%d", total))
+				suite.True(bytes.Compare(offset, ts) <= 0)
+				suite.Equal(string(args[1]), fmt.Sprintf("k%d", total))
 				content = leftover
 			}
 		}

@@ -85,10 +85,15 @@ func (b *AOFBus) Close() error {
 
 func (b *AOFBus) Sync(ctx context.Context, writer io.Writer, offset []byte) error {
 	aofFile, err := os.OpenFile(b.path, os.O_RDONLY, os.ModePerm)
-	defer aofFile.Close()
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := aofFile.Close(); err != nil {
+			logger.Error("%v", err)
+		}
+	}()
+
 	rd := bufio.NewReader(aofFile)
 
 	//1. Find the position by offset

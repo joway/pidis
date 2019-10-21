@@ -1,7 +1,6 @@
 package executor_test
 
 import (
-	"fmt"
 	"github.com/go-redis/redis/v7"
 	"github.com/stretchr/testify/suite"
 	"testing"
@@ -88,7 +87,6 @@ func (suite *KVTestSuite) TestSetNX() {
 
 	isCreated, err = suite.cli.SetNX("k2", "v", 0).Result()
 	suite.NoError(err)
-	fmt.Println("isCreated", isCreated)
 	suite.True(isCreated)
 }
 
