@@ -2,8 +2,8 @@ version = 1
 test_patterns = ['*_test.go']
 exclude_patterns = []
 
+[analyzers.meta]
+import_path = 'github.com/joway/pikv'
 [[analyzers]]
 name = 'go'
 enabled = true
-[analyzers.meta]
-import_path = 'github.com/joway/pikv'
