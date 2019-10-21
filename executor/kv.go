@@ -56,22 +56,22 @@ func (e KVExecutor) Set(store storage.Storage, args [][]byte) (*Result, error) {
 	}
 
 	var (
-		key        = args[1]
-		val        = args[2]
-		ttl uint64 = 0
-		err error
+		key           = args[1]
+		val           = args[2]
+		ttl    uint64 = 0
+		retErr error
 	)
 	if len(args) >= 5 {
 		switch strings.ToUpper(string(args[3])) {
 		case "EX":
-			ttl, err = strconv.ParseUint(string(args[4]), 10, 64)
+			ttl, retErr = strconv.ParseUint(string(args[4]), 10, 64)
 			ttl *= 1000
-			if err != nil {
+			if retErr != nil {
 				return nil, types.ErrSyntaxError
 			}
 		case "PX":
-			ttl, err = strconv.ParseUint(string(args[4]), 10, 64)
-			if err != nil {
+			ttl, retErr = strconv.ParseUint(string(args[4]), 10, 64)
+			if retErr != nil {
 				return nil, types.ErrSyntaxError
 			}
 		}
@@ -85,7 +85,7 @@ func (e KVExecutor) Set(store storage.Storage, args [][]byte) (*Result, error) {
 		//TODO: performance, use IsExisted check
 		_, err := store.Get(key)
 		if err == types.ErrKeyNotFound {
-			err = store.Set(key, val, ttl)
+			retErr = store.Set(key, val, ttl)
 		} else {
 			return &Result{output: util.MessageNull()}, nil
 		}
@@ -95,12 +95,12 @@ func (e KVExecutor) Set(store storage.Storage, args [][]byte) (*Result, error) {
 		if err == types.ErrKeyNotFound {
 			return &Result{output: util.MessageNull()}, nil
 		}
-		err = store.Set(key, val, ttl)
+		retErr = store.Set(key, val, ttl)
 	default:
-		err = store.Set(key, val, ttl)
+		retErr = store.Set(key, val, ttl)
 	}
-	if err != nil {
-		logger.Error("%v", err)
+	if retErr != nil {
+		logger.Error("%v", retErr)
 		return nil, types.ErrRuntimeError
 	}
 	return &Result{output: util.MessageOK()}, nil

@@ -69,7 +69,9 @@ func startServer(cfg Config) error {
 	}
 	defer func() {
 		logger.Info("graceful shutdown")
-		database.Close()
+		if err := database.Close(); err != nil {
+			logger.Error("%v", err)
+		}
 	}()
 	database.Run()
 
@@ -105,15 +107,14 @@ func startServer(cfg Config) error {
 		}
 	}()
 
-	stop := make(chan os.Signal)
-	signal.Notify(stop, os.Interrupt)
-	select {
-	case <-stop:
-		if err := redisServer.Close(); err != nil {
-			logger.Error("%v", err)
-		}
-		rpcServer.GracefulStop()
+	sigStop := make(chan os.Signal, 1)
+	signal.Notify(sigStop, os.Interrupt)
 
+	//wait for stop signal
+	<-sigStop
+	if err := redisServer.Close(); err != nil {
+		logger.Error("%v", err)
 	}
+	rpcServer.GracefulStop()
 	return nil
 }
