@@ -28,6 +28,7 @@ jobs:
       - image: circleci/golang:1.13
       - image: redis
       - image: pikadb/pika
+        command: "bin/pika -c ./conf/pika.conf"
       - image: joway/ledisdb
         command: "ledis-server --config=/config.toml -addr 0.0.0.0:6381"
       - image: alash3al/redix
