@@ -3,33 +3,33 @@ package db
 import (
 	"context"
 	"github.com/joway/loki"
-	"github.com/joway/pikv/proto"
-	"github.com/joway/pikv/util"
+	"github.com/joway/pidis/proto"
+	"github.com/joway/pidis/util"
 	"google.golang.org/grpc"
 )
 
-var rpcLogger = loki.New("pikv:db:rpc")
+var rpcLogger = loki.New("pidis:db:rpc")
 
 func NewRpcServer(database *Database) *grpc.Server {
 	server := grpc.NewServer()
-	proto.RegisterPiKVServer(server, NewPiKVService(database))
+	proto.RegisterPidisServer(server, NewPidisService(database))
 
 	return server
 }
 
-type PiKVService struct {
-	proto.UnimplementedPiKVServer
+type PidisService struct {
+	proto.UnimplementedPidisServer
 
 	db *Database
 }
 
-func NewPiKVService(database *Database) *PiKVService {
-	return &PiKVService{
+func NewPidisService(database *Database) *PidisService {
+	return &PidisService{
 		db: database,
 	}
 }
 
-func (s *PiKVService) Snapshot(req *proto.SnapshotReq, srv proto.PiKV_SnapshotServer) error {
+func (s *PidisService) Snapshot(req *proto.SnapshotReq, srv proto.Pidis_SnapshotServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -68,7 +68,7 @@ func (s *PiKVService) Snapshot(req *proto.SnapshotReq, srv proto.PiKV_SnapshotSe
 	return err
 }
 
-func (s *PiKVService) Oplog(req *proto.OplogReq, srv proto.PiKV_OplogServer) error {
+func (s *PidisService) Oplog(req *proto.OplogReq, srv proto.Pidis_OplogServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var syncErr = make(chan error, 1)

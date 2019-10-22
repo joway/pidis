@@ -1,11 +1,11 @@
-# PiKV
+# Pidis
 
 <img width="256px" src="logo.png" alt="logo">
 
-![GitHub release](https://img.shields.io/github/tag/joway/pikv.svg?label=release)
-[![Go Report Card](https://goreportcard.com/badge/github.com/joway/pikv)](https://goreportcard.com/report/github.com/joway/pikv)
-[![CircleCI](https://circleci.com/gh/joway/pikv.svg?style=shield)](https://circleci.com/gh/joway/pikv)
-[![codecov](https://codecov.io/gh/joway/pikv/branch/master/graph/badge.svg)](https://codecov.io/gh/joway/pikv)
+![GitHub release](https://img.shields.io/github/tag/joway/pidis.svg?label=release)
+[![Go Report Card](https://goreportcard.com/badge/github.com/joway/pidis)](https://goreportcard.com/report/github.com/joway/pidis)
+[![CircleCI](https://circleci.com/gh/joway/pidis.svg?style=shield)](https://circleci.com/gh/joway/pidis)
+[![codecov](https://codecov.io/gh/joway/pidis/branch/master/graph/badge.svg)](https://codecov.io/gh/joway/pidis)
 
 A redis protocol compatible key-value store. It's built on top of [Badger](https://github.com/dgraph-io/badger).
 
@@ -16,26 +16,26 @@ A redis protocol compatible key-value store. It's built on top of [Badger](https
 ```bash
 docker run \
   --rm \
-  --name=pikv \
+  --name=pidis \
   -p 6380:6380 \
   -p 6381:6381 \
-  -v /tmp/pikv:/data \
-  joway/pikv:latest \
+  -v /tmp/pidis:/data \
+  joway/pidis:latest \
   -p 6380 --rpcPort 6381 -d /data
 ```
 
 ### From go get
 
 ```bash
-$ go get -u github.com/joway/pikv/...
+$ go get -u github.com/joway/pidis/...
 
 # check version
-$ pikv -v
+$ pidis -v
 
-# run pikv server
-$ pikv -p 6380 -d /data
+# run pidis server
+$ pidis -p 6380 -d /data
 
-# connect pikv server
+# connect pidis server
 $ redis-cli -p 6380
 ```
 
@@ -57,7 +57,7 @@ $ redis-cli -p 6380
 - CircleCI Docker
 - medium
 
-### PiKV
+### Pidis
 
 ```bash
 $ redis-benchmark -p 6380 -d 1000 -q -t SET,GET -P 1024 -r 1000000000 -n 1000000

@@ -2,7 +2,7 @@
 
 This benchmark test raw set/get.
 
-### pikv with badger storage
+### pidis with badger storage
  
 ```bash
 redis-benchmark -p 6380 -q -t SET,GET -P 1024 -r 1000000000 -n 10000000
@@ -10,7 +10,7 @@ SET: 89827.09 requests per second
 GET: 473619.41 requests per second
 ```
 
-### pikv with memory storage
+### pidis with memory storage
 
 ```bash
 redis-benchmark -p 6380 -q -t SET,GET -P 1024 -r 1000000000 -n 10000000

@@ -2,7 +2,7 @@ package executor
 
 import (
 	"github.com/joway/loki"
-	"github.com/joway/pikv/storage"
+	"github.com/joway/pidis/storage"
 	"strings"
 )
 
@@ -31,7 +31,7 @@ const (
 	TypeWrite  = 2
 )
 
-var logger = loki.New("pikv:executor")
+var logger = loki.New("pidis:executor")
 
 func New(cmd string) Executor {
 	switch strings.ToUpper(cmd) {

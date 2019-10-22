@@ -1,4 +1,4 @@
-module github.com/joway/pikv
+module github.com/joway/pidis
 
 go 1.13
 

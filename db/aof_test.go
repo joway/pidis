@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/joway/pikv/util"
+	"github.com/joway/pidis/util"
 	"github.com/stretchr/testify/suite"
 	"os"
 	"path"
@@ -23,7 +23,7 @@ func TestAOF(t *testing.T) {
 }
 
 func (suite *AOFTestSuite) SetupTest() {
-	suite.dir = "/tmp/pikv/aof"
+	suite.dir = "/tmp/pidis/aof"
 	_ = os.RemoveAll(suite.dir)
 	_ = os.MkdirAll(suite.dir, os.ModePerm)
 }

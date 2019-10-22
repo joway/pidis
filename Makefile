@@ -1,4 +1,4 @@
-PROJECT_NAME = pikv
+PROJECT_NAME = pidis
 PACKAGES ?= $(shell go list ./... | grep -v /vendor/)
 GOFILES := $(shell find . -name "*.go" -type f -not -path "./vendor/*")
 GOFMT ?= gofmt "-s"
@@ -57,7 +57,7 @@ fmt-check:
 .PHONY: build
 build: $(GOFILES)
 	@echo ">> building binaries"
-	@CGO_ENABLED=0 go build $(GO_BUILD_TAGS) -o bin/pikv cmd/pikv/*
+	@CGO_ENABLED=0 go build $(GO_BUILD_TAGS) -o bin/pidis cmd/pidis/*
 
 .PHONY: docker-build
 docker-build:

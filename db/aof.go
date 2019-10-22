@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"github.com/joway/pikv/types"
+	"github.com/joway/pidis/types"
 	"github.com/tidwall/redcon"
 	"io"
 	"os"

@@ -1,9 +1,9 @@
 package executor
 
 import (
-	"github.com/joway/pikv/storage"
-	"github.com/joway/pikv/types"
-	"github.com/joway/pikv/util"
+	"github.com/joway/pidis/storage"
+	"github.com/joway/pidis/types"
+	"github.com/joway/pidis/util"
 	"strconv"
 	"strings"
 )

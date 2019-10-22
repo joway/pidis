@@ -2,7 +2,7 @@ package storage
 
 import (
 	"fmt"
-	"github.com/joway/pikv/types"
+	"github.com/joway/pidis/types"
 	"github.com/stretchr/testify/suite"
 	"os"
 	"testing"
@@ -20,7 +20,7 @@ func TestStorage(t *testing.T) {
 }
 
 func (suite *StorageTestSuite) SetupTest() {
-	suite.dir = "/tmp/pikv/storage"
+	suite.dir = "/tmp/pidis/storage"
 	_ = os.RemoveAll(suite.dir)
 }
 

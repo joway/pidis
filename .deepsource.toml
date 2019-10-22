@@ -6,4 +6,4 @@ exclude_patterns = []
 name = 'go'
 enabled = true
 [analyzers.meta]
-import_path = 'github.com/joway/pikv'
+import_path = 'github.com/joway/pidis'

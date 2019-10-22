@@ -5,8 +5,8 @@ import (
 	"github.com/akutz/memconn"
 	"github.com/go-redis/redis/v7"
 	"github.com/joway/loki"
-	"github.com/joway/pikv/db"
-	"github.com/joway/pikv/util"
+	"github.com/joway/pidis/db"
+	"github.com/joway/pidis/util"
 	"github.com/tidwall/redcon"
 	"net"
 	"os"
@@ -23,7 +23,7 @@ func init() {
 	}
 
 	e2eListener, _ = memconn.Listen("memu", "mem")
-	dir := "/tmp/pikv/e2e"
+	dir := "/tmp/pidis/e2e"
 	database, _ := db.New(db.Options{DBDir: dir})
 	redisServer := redcon.NewServer(
 		"",

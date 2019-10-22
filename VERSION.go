@@ -1,3 +1,3 @@
-package pikv
+package pidis
 
 var VERSION = "0.1.0"

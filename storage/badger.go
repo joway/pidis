@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/dgraph-io/badger"
 	"github.com/gobwas/glob"
-	"github.com/joway/pikv/types"
+	"github.com/joway/pidis/types"
 	"io"
 	"regexp"
 	"runtime"

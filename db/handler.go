@@ -2,9 +2,9 @@ package db
 
 import (
 	"fmt"
-	"github.com/joway/pikv/executor"
-	"github.com/joway/pikv/types"
-	"github.com/joway/pikv/util"
+	"github.com/joway/pidis/executor"
+	"github.com/joway/pidis/types"
+	"github.com/joway/pidis/util"
 	"github.com/tidwall/redcon"
 )
 

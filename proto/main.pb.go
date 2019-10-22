@@ -204,24 +204,24 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// PiKVClient is the client API for PiKV service.
+// PidisClient is the client API for Pidis service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type PiKVClient interface {
-	Snapshot(ctx context.Context, in *SnapshotReq, opts ...grpc.CallOption) (PiKV_SnapshotClient, error)
-	Oplog(ctx context.Context, in *OplogReq, opts ...grpc.CallOption) (PiKV_OplogClient, error)
+type PidisClient interface {
+	Snapshot(ctx context.Context, in *SnapshotReq, opts ...grpc.CallOption) (Pidis_SnapshotClient, error)
+	Oplog(ctx context.Context, in *OplogReq, opts ...grpc.CallOption) (Pidis_OplogClient, error)
 }
 
 type piKVClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewPiKVClient(cc *grpc.ClientConn) PiKVClient {
+func NewPidisClient(cc *grpc.ClientConn) PidisClient {
 	return &piKVClient{cc}
 }
 
-func (c *piKVClient) Snapshot(ctx context.Context, in *SnapshotReq, opts ...grpc.CallOption) (PiKV_SnapshotClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_PiKV_serviceDesc.Streams[0], "/proto.PiKV/Snapshot", opts...)
+func (c *piKVClient) Snapshot(ctx context.Context, in *SnapshotReq, opts ...grpc.CallOption) (Pidis_SnapshotClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Pidis_serviceDesc.Streams[0], "/proto.Pidis/Snapshot", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +235,7 @@ func (c *piKVClient) Snapshot(ctx context.Context, in *SnapshotReq, opts ...grpc
 	return x, nil
 }
 
-type PiKV_SnapshotClient interface {
+type Pidis_SnapshotClient interface {
 	Recv() (*SnapshotResp, error)
 	grpc.ClientStream
 }
@@ -252,8 +252,8 @@ func (x *piKVSnapshotClient) Recv() (*SnapshotResp, error) {
 	return m, nil
 }
 
-func (c *piKVClient) Oplog(ctx context.Context, in *OplogReq, opts ...grpc.CallOption) (PiKV_OplogClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_PiKV_serviceDesc.Streams[1], "/proto.PiKV/Oplog", opts...)
+func (c *piKVClient) Oplog(ctx context.Context, in *OplogReq, opts ...grpc.CallOption) (Pidis_OplogClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Pidis_serviceDesc.Streams[1], "/proto.Pidis/Oplog", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +267,7 @@ func (c *piKVClient) Oplog(ctx context.Context, in *OplogReq, opts ...grpc.CallO
 	return x, nil
 }
 
-type PiKV_OplogClient interface {
+type Pidis_OplogClient interface {
 	Recv() (*OplogResp, error)
 	grpc.ClientStream
 }
@@ -284,36 +284,36 @@ func (x *piKVOplogClient) Recv() (*OplogResp, error) {
 	return m, nil
 }
 
-// PiKVServer is the server API for PiKV service.
-type PiKVServer interface {
-	Snapshot(*SnapshotReq, PiKV_SnapshotServer) error
-	Oplog(*OplogReq, PiKV_OplogServer) error
+// PidisServer is the server API for Pidis service.
+type PidisServer interface {
+	Snapshot(*SnapshotReq, Pidis_SnapshotServer) error
+	Oplog(*OplogReq, Pidis_OplogServer) error
 }
 
-// UnimplementedPiKVServer can be embedded to have forward compatible implementations.
-type UnimplementedPiKVServer struct {
+// UnimplementedPidisServer can be embedded to have forward compatible implementations.
+type UnimplementedPidisServer struct {
 }
 
-func (*UnimplementedPiKVServer) Snapshot(req *SnapshotReq, srv PiKV_SnapshotServer) error {
+func (*UnimplementedPidisServer) Snapshot(req *SnapshotReq, srv Pidis_SnapshotServer) error {
 	return status.Errorf(codes.Unimplemented, "method Snapshot not implemented")
 }
-func (*UnimplementedPiKVServer) Oplog(req *OplogReq, srv PiKV_OplogServer) error {
+func (*UnimplementedPidisServer) Oplog(req *OplogReq, srv Pidis_OplogServer) error {
 	return status.Errorf(codes.Unimplemented, "method Oplog not implemented")
 }
 
-func RegisterPiKVServer(s *grpc.Server, srv PiKVServer) {
-	s.RegisterService(&_PiKV_serviceDesc, srv)
+func RegisterPidisServer(s *grpc.Server, srv PidisServer) {
+	s.RegisterService(&_Pidis_serviceDesc, srv)
 }
 
-func _PiKV_Snapshot_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Pidis_Snapshot_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(SnapshotReq)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(PiKVServer).Snapshot(m, &piKVSnapshotServer{stream})
+	return srv.(PidisServer).Snapshot(m, &piKVSnapshotServer{stream})
 }
 
-type PiKV_SnapshotServer interface {
+type Pidis_SnapshotServer interface {
 	Send(*SnapshotResp) error
 	grpc.ServerStream
 }
@@ -326,15 +326,15 @@ func (x *piKVSnapshotServer) Send(m *SnapshotResp) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _PiKV_Oplog_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Pidis_Oplog_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(OplogReq)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(PiKVServer).Oplog(m, &piKVOplogServer{stream})
+	return srv.(PidisServer).Oplog(m, &piKVOplogServer{stream})
 }
 
-type PiKV_OplogServer interface {
+type Pidis_OplogServer interface {
 	Send(*OplogResp) error
 	grpc.ServerStream
 }
@@ -347,19 +347,19 @@ func (x *piKVOplogServer) Send(m *OplogResp) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-var _PiKV_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "proto.PiKV",
-	HandlerType: (*PiKVServer)(nil),
+var _Pidis_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "proto.Pidis",
+	HandlerType: (*PidisServer)(nil),
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Snapshot",
-			Handler:       _PiKV_Snapshot_Handler,
+			Handler:       _Pidis_Snapshot_Handler,
 			ServerStreams: true,
 		},
 		{
 			StreamName:    "Oplog",
-			Handler:       _PiKV_Oplog_Handler,
+			Handler:       _Pidis_Oplog_Handler,
 			ServerStreams: true,
 		},
 	},

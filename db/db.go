@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/joway/loki"
-	"github.com/joway/pikv/executor"
-	"github.com/joway/pikv/proto"
-	"github.com/joway/pikv/storage"
-	"github.com/joway/pikv/types"
+	"github.com/joway/pidis/executor"
+	"github.com/joway/pidis/proto"
+	"github.com/joway/pidis/storage"
+	"github.com/joway/pidis/types"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"io"
@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-var logger = loki.New("pikv:db")
+var logger = loki.New("pidis:db")
 
 type Options struct {
 	DBDir string
@@ -38,7 +38,7 @@ type Database struct {
 
 func New(options Options) (*Database, error) {
 	dataDir := path.Join(options.DBDir, "data")
-	aofFilePath := path.Join(options.DBDir, "pikv.aof")
+	aofFilePath := path.Join(options.DBDir, "pidis.aof")
 	if err := os.MkdirAll(dataDir, os.ModePerm); err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func (db *Database) Following(ctx context.Context) error {
 		return types.ErrNodeIsMaster
 	}
 
-	client := proto.NewPiKVClient(db.followingConn)
+	client := proto.NewPidisClient(db.followingConn)
 	offsetId := NewUID()
 	//fetch snapshot
 	snapPath := path.Join(db.dir, fmt.Sprintf("%s.snapshot", offsetId.Timestamp()))

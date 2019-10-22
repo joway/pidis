@@ -3,7 +3,7 @@ package db
 import (
 	"bufio"
 	"context"
-	"github.com/joway/pikv/util"
+	"github.com/joway/pidis/util"
 	"github.com/stretchr/testify/suite"
 	"io"
 	"net"
@@ -24,7 +24,7 @@ func TestDatabase(t *testing.T) {
 }
 
 func (suite *DBTestSuite) SetupTest() {
-	suite.dir = "/tmp/pikv/db"
+	suite.dir = "/tmp/pidis/db"
 	_ = os.RemoveAll(suite.dir)
 	_ = os.MkdirAll(suite.dir, os.ModePerm)
 }
@@ -95,7 +95,7 @@ func (suite *DBTestSuite) TestSnapshot() {
 	_, err = db.Exec(util.CommandToArgs("set a x"))
 	suite.NoError(err)
 
-	f, err := os.OpenFile(path.Join(suite.dir, "pikv.snap"), os.O_RDWR|os.O_CREATE, os.ModePerm)
+	f, err := os.OpenFile(path.Join(suite.dir, "pidis.snap"), os.O_RDWR|os.O_CREATE, os.ModePerm)
 	suite.NoError(err)
 	defer func() { suite.NoError(f.Close()) }()
 	writer := bufio.NewWriter(f)

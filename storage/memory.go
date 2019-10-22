@@ -2,7 +2,7 @@ package storage
 
 import (
 	"github.com/gobwas/glob"
-	"github.com/joway/pikv/types"
+	"github.com/joway/pidis/types"
 	"github.com/tidwall/buntdb"
 	"time"
 )

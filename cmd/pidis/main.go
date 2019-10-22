@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/joway/loki"
-	"github.com/joway/pikv"
-	"github.com/joway/pikv/db"
+	"github.com/joway/pidis"
+	"github.com/joway/pidis/db"
 	"github.com/tidwall/redcon"
 	"github.com/urfave/cli"
 	"net"
@@ -12,7 +12,7 @@ import (
 	"os/signal"
 )
 
-var logger = loki.New("pikv:main")
+var logger = loki.New("pidis:main")
 
 type Config struct {
 	port    string
@@ -22,8 +22,8 @@ type Config struct {
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "pikv"
-	app.Version = pikv.VERSION
+	app.Name = "pidis"
+	app.Version = pidis.VERSION
 	app.Usage = ""
 	cli.VersionFlag = cli.BoolFlag{
 		Name: "version, v",
@@ -39,7 +39,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "dir, d",
-			Value: "/tmp/pikv",
+			Value: "/tmp/pidis",
 		},
 	}
 	app.Action = func(c *cli.Context) error {
@@ -78,7 +78,7 @@ func startServer(cfg Config) error {
 	rdsAddr := fmt.Sprintf(":%s", cfg.port)
 	rpcAddr := fmt.Sprintf(":%s", cfg.rpcPort)
 	rdsLis, err := net.Listen("tcp", rdsAddr)
-	logger.Info("running pikv server at: %s", rdsAddr)
+	logger.Info("running pidis server at: %s", rdsAddr)
 	if err != nil {
 		logger.Fatal("%v", err)
 	}
